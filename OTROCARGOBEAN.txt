@@ -1,0 +1,3170 @@
+package com.artsoft.jmcartera.documentos;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+
+import javax.faces.application.FacesMessage;
+import javax.faces.bean.ManagedProperty;
+import javax.faces.context.FacesContext;
+import javax.faces.event.AjaxBehaviorEvent;
+import javax.faces.model.SelectItem;
+
+import org.apache.log4j.Logger;
+import org.primefaces.context.RequestContext;
+
+import com.artsoft.jframework.entidades.Sesion;
+import com.artsoft.jframework.librerias.Librerias;
+import com.artsoft.jmcartera.configuraciones.AccesoContexto;
+import com.artsoft.jmcartera.configuraciones.ConfiguracionGeneralAplicacion;
+import com.artsoft.jmcartera.consultas.CargoConsultaBean;
+import com.artsoft.jmcartera.converter.AlmacenConverter;
+import com.artsoft.jmcartera.converter.ClienteConverter;
+import com.artsoft.jmcartera.converter.DireccionConverter;
+import com.artsoft.jmcartera.converter.MetodoPagoConverter;
+import com.artsoft.jmcartera.converter.MonedaConverter;
+import com.artsoft.jmcartera.converter.TipoDocumentoConverter;
+import com.artsoft.jmcartera.converter.TipoMovimientoConverter;
+import com.artsoft.jmcartera.converter.TipoPagoConverter;
+import com.artsoft.jmcartera.entidades.FiltroMatcoReciboCaja;
+
+import com.artsoft.jmcartera.entidades.FiltroMatcoAccesosGenerales;
+import com.artsoft.jmcartera.entidades.FiltroMatcoCargo;
+import com.artsoft.jmcartera.entidades.FiltroMatcoDetalleAccesos;
+import com.artsoft.jmcartera.entidades.FiltroMatcoDireccion;
+import com.artsoft.jmcartera.entidades.FiltroMatcoMetodoPago;
+import com.artsoft.jmcartera.entidades.FiltroMatcoOtroCargo;
+import com.artsoft.jmcartera.entidades.FiltroMatcoReciboCaja;
+import com.artsoft.jmcartera.entidades.FiltroMatcoParidad;
+import com.artsoft.jmcartera.entidades.FiltroMatcoTipoDocumento;
+import com.artsoft.jmcartera.entidades.FiltroMatcoTipoMovimiento;
+import com.artsoft.jmcartera.entidades.FiltroMatcoTipoPago;
+import com.artsoft.jmcartera.entidades.ListaMatcoAccesosGenerales;
+import com.artsoft.jmcartera.entidades.ListaMatcoCargo;
+import com.artsoft.jmcartera.entidades.ListaMatcoDetalleAccesos;
+import com.artsoft.jmcartera.entidades.ListaMatcoDireccion;
+import com.artsoft.jmcartera.entidades.ListaMatcoMetodoPago;
+import com.artsoft.jmcartera.entidades.ListaMatcoOtroCargo;
+import com.artsoft.jmcartera.entidades.ListaMatcoParidad;
+import com.artsoft.jmcartera.entidades.ListaMatcoOtroCargo;
+import com.artsoft.jmcartera.entidades.ListaMatcoTipoDocumento;
+import com.artsoft.jmcartera.entidades.ListaMatcoTipoMovimiento;
+import com.artsoft.jmcartera.entidades.ListaMatcoTipoPago;
+import com.artsoft.jmcartera.entidades.MatcoAccesosGenerales;
+import com.artsoft.jmcartera.entidades.MatcoAlmacen;
+import com.artsoft.jmcartera.entidades.MatcoCargo;
+import com.artsoft.jmcartera.entidades.MatcoDetalleAccesos;
+import com.artsoft.jmcartera.entidades.MatcoDireccion;
+import com.artsoft.jmcartera.entidades.MatcoMetodoPago;
+import com.artsoft.jmcartera.entidades.MatcoOtroCargo;
+import com.artsoft.jmcartera.entidades.MatcoReciboCaja;
+import com.artsoft.jmcartera.entidades.MatcoReciboCajaDetalle;
+import com.artsoft.jmcartera.entidades.MatcoTipoPago;
+
+import com.artsoft.jmcartera.entidades.MatcoReciboCaja;
+import com.artsoft.jmcartera.entidades.MatcoTipoDocumento;
+import com.artsoft.jmcartera.entidades.MatcoTipoMovimiento;
+import com.artsoft.jmcartera.proveedor.ServicioMatcoAccesosGeneralesProveedor;
+import com.artsoft.jmcartera.proveedor.ServicioMatcoCargoProveedor;
+import com.artsoft.jmcartera.proveedor.ServicioMatcoDetalleAccesosProveedor;
+import com.artsoft.jmcartera.proveedor.ServicioMatcoDireccionProveedor;
+import com.artsoft.jmcartera.proveedor.ServicioMatcoMetodoPagoProveedor;
+import com.artsoft.jmcartera.proveedor.ServicioMatcoOtroCargoProveedor;
+
+import com.artsoft.jmcartera.proveedor.ServicioMatcoParidadProveedor;
+import com.artsoft.jmcartera.proveedor.ServicioMatcoTipoPagoProveedor;
+
+import com.artsoft.jmcartera.proveedor.ServicioMatcoTipoDocumentoProveedor;
+import com.artsoft.jmcartera.proveedor.ServicioMatcoTipoMovimientoProveedor;
+import com.frameworkui.entidades.AccesoConstante;
+import com.frameworkui.interfaces.IDocumentoBean;
+import com.frameworkui.librerias.Mensajes;
+import com.matco.ejes.entity.Almacen;
+import com.matco.ejes.entity.Cliente;
+import com.matco.ejes.entity.Moneda;
+import com.matco.ejes.entity.Sucursal;
+import com.matco.ejes.facade.AlmacenFacade;
+import com.matco.ejes.facade.ClienteFacade;
+import com.matco.ejes.facade.MonedaFacade;
+import com.matco.ejes.facade.SucursalFacade;
+import com.sun.org.apache.xerces.internal.impl.validation.EntityState;
+
+public class OtroCargoBean extends
+		com.artsoft.jmcartera.configuraciones.DocumentoBaseBean implements
+		IDocumentoBean {
+
+	private static Logger log = Logger.getLogger(OtroCargoBean.class);
+	private static final SimpleDateFormat formatoFecha = new SimpleDateFormat(
+			"dd/MMM/yyyy");
+
+	// inicio propiedades Derechos
+	private boolean derechoAgregar;
+	private boolean derechoConsultar;
+	private boolean derechoEliminar;
+	private boolean derechoCancelar;
+
+	private String accion;
+
+	private String serie;
+	private int idAlmacen;
+	private int folio;
+	private String tipoMovimiento;
+	private Date fecha;
+	private int idCliente;
+	private String razonSocial;
+	private String calle;
+	private String numeroExterior;
+	private String numeroInterior;
+	private String codigoPostal;
+	private String idPais;
+	private String idEstado;
+	private int idMunicipio;
+	private int idLocalidad;
+	private int idColonia;
+	private String idTipoPago;
+	private double subtotal;
+	private double gravable;
+	private double impuesto;
+	private double total;
+	private String idMoneda;
+	private double paridad;
+	private String estatus;
+	private Date fechaExpedicion;
+	private String folioFiscal;
+	private Date fechaCancelacion;
+	private String capturo;
+	private String idMetodoPago;
+	private String cuentaPago;
+	private String creadorPor;
+	private String modificadoPor;
+	private Date fechaHoraCaptura;
+	private Date fechaHoraActualizacion;
+	private String direccionCompuesta;
+
+	private String serieCargo;
+	private int idAlmacenCargo;
+	private int folioCargo;
+	private String documentoCargo;
+	private String concepto1;
+	private String concepto2;
+	private double importeCargo;
+	private double saldoCargo;
+	private double totalCargos;
+
+	private String accesoTipoDocumento;
+	private String accesoAlmacen;
+	private String accesoFolio;
+	private String accesoFecha;
+	private String accesoIdCliente;
+	private String accesoIdMoneda;
+	private String accesoParidad;
+	private String accesoTipoPago;
+	private String accesoMetodoPago;
+	private String accesoCuentaPago;
+
+	private String titulo;
+	private String clienteConsulta;
+	private String nombreSucursal;
+	private SelectItem[] opcionesEstatus;
+	private SelectItem[] opcionesMoneda;
+	private String busquedaClienteAnterior;
+	private boolean mostrarBotonLimpiarCliente;
+	private boolean deshabilitarCampoCliente;
+	private boolean solicitarCuentaPago;
+
+	private boolean deshabilitarCampoDireccion;
+	private boolean mostrarBotonLimpiarDireccion;
+	private int paramIdAlmacen;
+	private String paramIdTipoDocumento;
+	private boolean habilitarOpcionCancelar;
+	private boolean habilitarOpcionDepurar;
+	private boolean habilitarOpcionModificar;
+	private boolean habilitarOpcionAgregar;
+	private boolean habilitarOpcionConsultar;
+	private String documento;
+	private String modoEdicion;
+	private boolean enModoEdicion;
+	private boolean esAbonoIndependiente;
+	private boolean solicitarDocumentoCargo;
+
+	private Sesion sesion;
+	private ServicioMatcoTipoDocumentoProveedor servicioMatcoTipoDocumento;
+	private ServicioMatcoTipoMovimientoProveedor servicioMatcoTipoMovimiento;
+	private ServicioMatcoTipoPagoProveedor servicioMatcoTipoPago;
+	private ServicioMatcoMetodoPagoProveedor servicioMatcoMetodoPago;
+	private ServicioMatcoCargoProveedor servicioMatcoCargo;
+	private AlmacenFacade servicioMatcoAlmacen;
+	private SucursalFacade servicioMatcoSucursal;
+	private MonedaFacade servicioMatcoMoneda;
+	private ClienteFacade servicioMatcoCliente;
+	private ServicioMatcoParidadProveedor servicioMatcoParidad;
+	private ServicioMatcoDireccionProveedor servicioMatcoDireccionProveedor;
+
+	private ServicioMatcoOtroCargoProveedor servicio;
+	private ServicioMatcoAccesosGeneralesProveedor servicioAccesosGenerales;
+	private ServicioMatcoDetalleAccesosProveedor servicioDetalleAccesos;
+
+	private MatcoReciboCaja entidadSeleccionada;
+	private MatcoReciboCajaDetalle entidadDetalleSeleccionada;
+	private MatcoReciboCaja entidadInicial;
+	private MatcoReciboCaja entidadActual;
+	private Sucursal sucursalActual;
+	private List<Almacen> listaAlmacen;
+	private ListaMatcoTipoDocumento listaTipoDocumento;
+	private ListaMatcoTipoMovimiento listaTipoMovimiento;
+	private ListaMatcoTipoDocumento listaTipoDocumentoCargos;
+	private List<Moneda> listaMoneda;
+	private ListaMatcoOtroCargo lista;
+	private List<Cliente> listaClientes;
+	private ListaMatcoAccesosGenerales listaAccesosGenerales;
+	private ListaMatcoDetalleAccesos listaDetalleAccesos;
+	private ListaMatcoDireccion listaDireccion;
+	private ListaMatcoTipoPago listaTipoPago;
+	private ListaMatcoMetodoPago listaMetodoPago;
+	private MatcoReciboCajaDetalle detalleActual;
+	private LinkedHashMap<String, MatcoReciboCajaDetalle> listaClavesCargos;
+
+	private Almacen paramAlmacen;
+	private MatcoTipoDocumento paramTipoDocumento;
+	private Almacen almacenAutoComplete;
+	private MatcoTipoDocumento tipoDocumentoAutoComplete;
+	private MatcoTipoMovimiento tipoMovimientoAutoComplete;
+	private MatcoTipoDocumento tipoDocumentoCargoAutoComplete;
+	private Almacen almacenGeneralAutoComplete;
+	private Almacen almacenCargoAutoComplete;
+
+	private Cliente clienteAutoComplete;
+	private Moneda monedaAutoComplete;
+	private MatcoDireccion direccionAutoComplete;
+	private MatcoTipoPago tipoPagoAutoComplete;
+	private MatcoMetodoPago metodoPagoAutoComplete;
+
+	private MatcoAccesosGenerales accesoDerechoAdministrar;
+	private MatcoAccesosGenerales accesoDerechoAgregar;
+	private MatcoAccesosGenerales accesoDerechoConsultar;
+	private MatcoAccesosGenerales accesoDerechoEliminar;
+	private MatcoAccesosGenerales accesoDerechoCancelar;
+
+	public boolean isDerechoAgregar() {
+		return derechoAgregar;
+	}
+
+	public void setDerechoAgregar(boolean derechoAgregar) {
+		this.derechoAgregar = derechoAgregar;
+	}
+
+	public boolean isDerechoConsultar() {
+		return derechoConsultar;
+	}
+
+	public void setDerechoConsultar(boolean derechoConsultar) {
+		this.derechoConsultar = derechoConsultar;
+	}
+
+	public boolean isDerechoEliminar() {
+		return derechoEliminar;
+	}
+
+	public void setDerechoEliminar(boolean derechoEliminar) {
+		this.derechoEliminar = derechoEliminar;
+	}
+
+	public boolean isDerechoCancelar() {
+		return derechoCancelar;
+	}
+
+	public void setDerechoCancelar(boolean derechoCancelar) {
+		this.derechoCancelar = derechoCancelar;
+	}
+
+	public String getSerie() {
+		return this.serie;
+	}
+
+	public void setSerie(String serie) {
+		this.serie = serie;
+	}
+
+	public int getIdAlmacen() {
+		return this.idAlmacen;
+	}
+
+	public void setIdAlmacen(int idalmacen) {
+		this.idAlmacen = idalmacen;
+	}
+
+	public int getFolio() {
+		return this.folio;
+	}
+
+	public void setFolio(int folio) {
+		this.folio = folio;
+	}
+
+	public String getTipoMovimiento() {
+		return this.tipoMovimiento;
+	}
+
+	public void setTipoMovimiento(String tipomovimiento) {
+		this.tipoMovimiento = tipomovimiento;
+	}
+
+	public Date getFecha() {
+		return this.fecha;
+	}
+
+	public void setFecha(Date fecha) {
+		this.fecha = fecha;
+	}
+
+	public int getIdCliente() {
+		return this.idCliente;
+	}
+
+	public void setIdCliente(int idcliente) {
+		this.idCliente = idcliente;
+	}
+
+	public String getRazonSocial() {
+		return this.razonSocial;
+	}
+
+	public void setRazonSocial(String razonsocial) {
+		this.razonSocial = razonsocial;
+	}
+
+	public String getCalle() {
+		return this.calle;
+	}
+
+	public void setCalle(String calle) {
+		this.calle = calle;
+	}
+
+	public String getNumeroExterior() {
+		return this.numeroExterior;
+	}
+
+	public void setNumeroExterior(String numeroexterior) {
+		this.numeroExterior = numeroexterior;
+	}
+
+	public String getNumeroInterior() {
+		return this.numeroInterior;
+	}
+
+	public void setNumeroInterior(String numerointerior) {
+		this.numeroInterior = numerointerior;
+	}
+
+	public String getCodigoPostal() {
+		return this.codigoPostal;
+	}
+
+	public void setCodigoPostal(String codigopostal) {
+		this.codigoPostal = codigopostal;
+	}
+
+	public String getIdPais() {
+		return this.idPais;
+	}
+
+	public void setIdPais(String idpais) {
+		this.idPais = idpais;
+	}
+
+	public String getIdEstado() {
+		return this.idEstado;
+	}
+
+	public void setIdEstado(String idestado) {
+		this.idEstado = idestado;
+	}
+
+	public int getIdMunicipio() {
+		return this.idMunicipio;
+	}
+
+	public void setIdMunicipio(int idmunicipio) {
+		this.idMunicipio = idmunicipio;
+	}
+
+	public int getIdLocalidad() {
+		return this.idLocalidad;
+	}
+
+	public void setIdLocalidad(int idlocalidad) {
+		this.idLocalidad = idlocalidad;
+	}
+
+	public int getIdColonia() {
+		return this.idColonia;
+	}
+
+	public void setIdColonia(int idcolonia) {
+		this.idColonia = idcolonia;
+	}
+
+	public String getIdTipoPago() {
+		return this.idTipoPago;
+	}
+
+	public void setIdTipoPago(String idtipopago) {
+		this.idTipoPago = idtipopago;
+	}
+
+	public double getSubtotal() {
+		return this.subtotal;
+	}
+
+	public void setSubtotal(double subtotal) {
+		this.subtotal = subtotal;
+	}
+
+	public double getGravable() {
+		return this.gravable;
+	}
+
+	public void setGravable(double gravable) {
+		this.gravable = gravable;
+	}
+
+	public double getImpuesto() {
+		return this.impuesto;
+	}
+
+	public void setImpuesto(double impuesto) {
+		this.impuesto = impuesto;
+	}
+
+	public double getTotal() {
+		return this.total;
+	}
+
+	public void setTotal(double total) {
+		this.total = total;
+	}
+
+	public String getIdMoneda() {
+		return this.idMoneda;
+	}
+
+	public void setIdMoneda(String idmoneda) {
+		this.idMoneda = idmoneda;
+	}
+
+	public double getParidad() {
+		return this.paridad;
+	}
+
+	public void setParidad(double paridad) {
+		this.paridad = paridad;
+	}
+
+	public String getEstatus() {
+		return this.estatus;
+	}
+
+	public void setEstatus(String estatus) {
+		this.estatus = estatus;
+	}
+
+	public Date getFechaExpedicion() {
+		return this.fechaExpedicion;
+	}
+
+	public void setFechaExpedicion(Date fechaexpedicion) {
+		this.fechaExpedicion = fechaexpedicion;
+	}
+
+	public String getFolioFiscal() {
+		return this.folioFiscal;
+	}
+
+	public void setFolioFiscal(String foliofiscal) {
+		this.folioFiscal = foliofiscal;
+	}
+
+	public Date getFechaCancelacion() {
+		return this.fechaCancelacion;
+	}
+
+	public void setFechaCancelacion(Date fechacancelacion) {
+		this.fechaCancelacion = fechacancelacion;
+	}
+
+	public String getCapturo() {
+		return this.capturo;
+	}
+
+	public void setCapturo(String capturo) {
+		this.capturo = capturo;
+	}
+
+	public String getIdMetodoPago() {
+		return this.idMetodoPago;
+	}
+
+	public void setIdMetodoPago(String idmetodopago) {
+		this.idMetodoPago = idmetodopago;
+	}
+
+	public String getCuentaPago() {
+		return this.cuentaPago;
+	}
+
+	public void setCuentaPago(String cuentapago) {
+		this.cuentaPago = cuentapago;
+	}
+
+	public String getCreadorPor() {
+		return this.creadorPor;
+	}
+
+	public void setCreadorPor(String creadorpor) {
+		this.creadorPor = creadorpor;
+	}
+
+	public String getModificadoPor() {
+		return this.modificadoPor;
+	}
+
+	public void setModificadoPor(String modificadopor) {
+		this.modificadoPor = modificadopor;
+	}
+
+	public Date getFechaHoraCaptura() {
+		return this.fechaHoraCaptura;
+	}
+
+	public void setFechaHoraCaptura(Date fechahoracaptura) {
+		this.fechaHoraCaptura = fechahoracaptura;
+	}
+
+	public Date getFechaHoraActualizacion() {
+		return this.fechaHoraActualizacion;
+	}
+
+	public void setFechaHoraActualizacion(Date fechahoraactualizacion) {
+		this.fechaHoraActualizacion = fechahoraactualizacion;
+	}
+
+	public String getDireccionCompuesta() {
+		return direccionCompuesta;
+	}
+
+	public void setDireccionCompuesta(String direccionCompuesta) {
+		this.direccionCompuesta = direccionCompuesta;
+	}
+
+	public String getSerieCargo() {
+		return serieCargo;
+	}
+
+	public void setSerieCargo(String serieCargo) {
+		this.serieCargo = serieCargo;
+	}
+
+	public int getIdAlmacenCargo() {
+		return idAlmacenCargo;
+	}
+
+	public void setIdAlmacenCargo(int idAlmacenCargo) {
+		this.idAlmacenCargo = idAlmacenCargo;
+	}
+
+	public int getFolioCargo() {
+		return folioCargo;
+	}
+
+	public void setFolioCargo(int folioCargo) {
+		this.folioCargo = folioCargo;
+	}
+
+	public String getDocumentoCargo() {
+		return documentoCargo;
+	}
+
+	public void setDocumentoCargo(String documentoCargo) {
+		this.documentoCargo = documentoCargo;
+	}
+
+	public String getConcepto1() {
+		return concepto1;
+	}
+
+	public void setConcepto1(String concepto1) {
+		this.concepto1 = concepto1;
+	}
+
+	public String getConcepto2() {
+		return concepto2;
+	}
+
+	public void setConcepto2(String concepto2) {
+		this.concepto2 = concepto2;
+	}
+
+	public double getImporteCargo() {
+		return importeCargo;
+	}
+
+	public void setImporteCargo(double importeCargo) {
+		this.importeCargo = importeCargo;
+	}
+
+	public double getSaldoCargo() {
+		return saldoCargo;
+	}
+
+	public void setSaldoCargo(double saldoCargo) {
+		this.saldoCargo = saldoCargo;
+	}
+
+	public double getTotalCargos() {
+		return totalCargos;
+	}
+
+	public void setTotalCargos(double totalCargos) {
+		this.totalCargos = totalCargos;
+	}
+
+	public String getAccesoTipoDocumento() {
+		return accesoTipoDocumento;
+	}
+
+	public void setAccesoTipoDocumento(String accesoTipoDocumento) {
+		this.accesoTipoDocumento = accesoTipoDocumento;
+	}
+
+	public String getAccesoAlmacen() {
+		return accesoAlmacen;
+	}
+
+	public void setAccesoAlmacen(String accesoAlmacen) {
+		this.accesoAlmacen = accesoAlmacen;
+	}
+
+	public String getAccesoFolio() {
+		return accesoFolio;
+	}
+
+	public void setAccesoFolio(String accesoFolio) {
+		this.accesoFolio = accesoFolio;
+	}
+
+	public String getAccesoFecha() {
+		return accesoFecha;
+	}
+
+	public void setAccesoFecha(String accesoFecha) {
+		this.accesoFecha = accesoFecha;
+	}
+
+	public String getAccesoIdCliente() {
+		return accesoIdCliente;
+	}
+
+	public void setAccesoIdCliente(String accesoIdCliente) {
+		this.accesoIdCliente = accesoIdCliente;
+	}
+
+	public String getAccesoIdMoneda() {
+		return accesoIdMoneda;
+	}
+
+	public void setAccesoIdMoneda(String accesoIdMoneda) {
+		this.accesoIdMoneda = accesoIdMoneda;
+	}
+
+	public String getAccesoParidad() {
+		return accesoParidad;
+	}
+
+	public void setAccesoParidad(String accesoParidad) {
+		this.accesoParidad = accesoParidad;
+	}
+
+	public String getAccesoTipoPago() {
+		return accesoTipoPago;
+	}
+
+	public void setAccesoTipoPago(String accesoTipoPago) {
+		this.accesoTipoPago = accesoTipoPago;
+	}
+
+	public String getAccesoMetodoPago() {
+		return accesoMetodoPago;
+	}
+
+	public void setAccesoMetodoPago(String accesoMetodoPago) {
+		this.accesoMetodoPago = accesoMetodoPago;
+	}
+
+	public String getAccesoCuentaPago() {
+		return accesoCuentaPago;
+	}
+
+	public void setAccesoCuentaPago(String accesoCuentaPago) {
+		this.accesoCuentaPago = accesoCuentaPago;
+	}
+
+	public String getTitulo() {
+		return titulo;
+	}
+
+	public void setTitulo(String titulo) {
+		this.titulo = titulo;
+	}
+
+	public String getClienteConsulta() {
+		return clienteConsulta;
+	}
+
+	public void setClienteConsulta(String clienteConsulta) {
+		this.clienteConsulta = clienteConsulta;
+	}
+
+	public String getNombreSucursal() {
+		return nombreSucursal;
+	}
+
+	public void setNombreSucursal(String nombreSucursal) {
+		this.nombreSucursal = nombreSucursal;
+	}
+
+	public SelectItem[] getOpcionesEstatus() {
+		return opcionesEstatus;
+	}
+
+	public void setOpcionesEstatus(SelectItem[] opcionesEstatus) {
+		this.opcionesEstatus = opcionesEstatus;
+	}
+
+	public SelectItem[] getOpcionesMoneda() {
+		return opcionesMoneda;
+	}
+
+	public void setOpcionesMoneda(SelectItem[] opcionesMoneda) {
+		this.opcionesMoneda = opcionesMoneda;
+	}
+
+	public String getBusquedaClienteAnterior() {
+		return busquedaClienteAnterior;
+	}
+
+	public void setBusquedaClienteAnterior(String busquedaClienteAnterior) {
+		this.busquedaClienteAnterior = busquedaClienteAnterior;
+	}
+
+	public boolean isMostrarBotonLimpiarCliente() {
+		return mostrarBotonLimpiarCliente;
+	}
+
+	public void setMostrarBotonLimpiarCliente(boolean mostrarBotonLimpiarCliente) {
+		this.mostrarBotonLimpiarCliente = mostrarBotonLimpiarCliente;
+	}
+
+	public boolean isDeshabilitarCampoCliente() {
+		return deshabilitarCampoCliente;
+	}
+
+	public void setDeshabilitarCampoCliente(boolean deshabilitarCampoCliente) {
+		this.deshabilitarCampoCliente = deshabilitarCampoCliente;
+	}
+
+	public boolean isSolicitarCuentaPago() {
+		return solicitarCuentaPago;
+	}
+
+	public void setSolicitarCuentaPago(boolean solicitarCuentaPago) {
+		this.solicitarCuentaPago = solicitarCuentaPago;
+	}
+
+	public boolean isDeshabilitarCampoDireccion() {
+		return deshabilitarCampoDireccion;
+	}
+
+	public void setDeshabilitarCampoDireccion(boolean deshabilitarCampoDireccion) {
+		this.deshabilitarCampoDireccion = deshabilitarCampoDireccion;
+	}
+
+	public boolean isMostrarBotonLimpiarDireccion() {
+		return mostrarBotonLimpiarDireccion;
+	}
+
+	public void setMostrarBotonLimpiarDireccion(
+			boolean mostrarBotonLimpiarDireccion) {
+		this.mostrarBotonLimpiarDireccion = mostrarBotonLimpiarDireccion;
+	}
+
+	public int getParamIdAlmacen() {
+		return paramIdAlmacen;
+	}
+
+	public void setParamIdAlmacen(int paramIdAlmacen) {
+		this.paramIdAlmacen = paramIdAlmacen;
+	}
+
+	public String getParamIdTipoDocumento() {
+		return paramIdTipoDocumento;
+	}
+
+	public void setParamIdTipoDocumento(String paramIdTipoDocumento) {
+		this.paramIdTipoDocumento = paramIdTipoDocumento;
+	}
+
+	public boolean isHabilitarOpcionCancelar() {
+		return habilitarOpcionCancelar;
+	}
+
+	public void setHabilitarOpcionCancelar(boolean habilitarOpcionCancelar) {
+		this.habilitarOpcionCancelar = habilitarOpcionCancelar;
+	}
+
+	public boolean isHabilitarOpcionDepurar() {
+		return habilitarOpcionDepurar;
+	}
+
+	public void setHabilitarOpcionDepurar(boolean habilitarOpcionDepurar) {
+		this.habilitarOpcionDepurar = habilitarOpcionDepurar;
+	}
+
+	public boolean isHabilitarOpcionModificar() {
+		return habilitarOpcionModificar;
+	}
+
+	public void setHabilitarOpcionModificar(boolean habilitarOpcionModificar) {
+		this.habilitarOpcionModificar = habilitarOpcionModificar;
+	}
+
+	public boolean isHabilitarOpcionAgregar() {
+		return habilitarOpcionAgregar;
+	}
+
+	public void setHabilitarOpcionAgregar(boolean habilitarOpcionAgregar) {
+		this.habilitarOpcionAgregar = habilitarOpcionAgregar;
+	}
+
+	public boolean isHabilitarOpcionConsultar() {
+		return habilitarOpcionConsultar;
+	}
+
+	public void setHabilitarOpcionConsultar(boolean habilitarOpcionConsultar) {
+		this.habilitarOpcionConsultar = habilitarOpcionConsultar;
+	}
+
+	public String getDocumento() {
+		return documento;
+	}
+
+	public void setDocumento(String documento) {
+		this.documento = documento;
+	}
+
+	public String getModoEdicion() {
+		return modoEdicion;
+	}
+
+	public void setModoEdicion(String modoEdicion) {
+		this.modoEdicion = modoEdicion;
+	}
+
+	public boolean isEnModoEdicion() {
+		return enModoEdicion;
+	}
+
+	public void setEnModoEdicion(boolean enModoEdicion) {
+		this.enModoEdicion = enModoEdicion;
+	}
+
+	public boolean isEsAbonoIndependiente() {
+		return esAbonoIndependiente;
+	}
+
+	public void setEsAbonoIndependiente(boolean esAbonoIndependiente) {
+		this.esAbonoIndependiente = esAbonoIndependiente;
+	}
+
+	public Sesion getSesion() {
+		return sesion;
+	}
+
+	public void setSesion(Sesion sesion) {
+		this.sesion = sesion;
+	}
+
+	public ServicioMatcoTipoDocumentoProveedor getServicioMatcoTipoDocumento() {
+		return servicioMatcoTipoDocumento;
+	}
+
+	public void setServicioMatcoTipoDocumento(
+			ServicioMatcoTipoDocumentoProveedor servicioMatcoTipoDocumento) {
+		this.servicioMatcoTipoDocumento = servicioMatcoTipoDocumento;
+	}
+
+	public ServicioMatcoTipoMovimientoProveedor getServicioMatcoTipoMovimiento() {
+		return servicioMatcoTipoMovimiento;
+	}
+
+	public void setServicioMatcoTipoMovimiento(
+			ServicioMatcoTipoMovimientoProveedor servicioMatcoTipoMovimiento) {
+		this.servicioMatcoTipoMovimiento = servicioMatcoTipoMovimiento;
+	}
+
+	public ServicioMatcoTipoPagoProveedor getServicioMatcoTipoPago() {
+		return servicioMatcoTipoPago;
+	}
+
+	public void setServicioMatcoTipoPago(
+			ServicioMatcoTipoPagoProveedor servicioMatcoTipoPago) {
+		this.servicioMatcoTipoPago = servicioMatcoTipoPago;
+	}
+
+	public ServicioMatcoMetodoPagoProveedor getServicioMatcoMetodoPago() {
+		return servicioMatcoMetodoPago;
+	}
+
+	public void setServicioMatcoMetodoPago(
+			ServicioMatcoMetodoPagoProveedor servicioMatcoMetodoPago) {
+		this.servicioMatcoMetodoPago = servicioMatcoMetodoPago;
+	}
+
+	public ServicioMatcoCargoProveedor getServicioMatcoCargo() {
+		return servicioMatcoCargo;
+	}
+
+	public void setServicioMatcoCargo(
+			ServicioMatcoCargoProveedor servicioMatcoCargo) {
+		this.servicioMatcoCargo = servicioMatcoCargo;
+	}
+
+	public AlmacenFacade getServicioMatcoAlmacen() {
+		return servicioMatcoAlmacen;
+	}
+
+	public void setServicioMatcoAlmacen(AlmacenFacade servicioMatcoAlmacen) {
+		this.servicioMatcoAlmacen = servicioMatcoAlmacen;
+	}
+
+	public SucursalFacade getServicioMatcoSucursal() {
+		return servicioMatcoSucursal;
+	}
+
+	public void setServicioMatcoSucursal(SucursalFacade servicioMatcoSucursal) {
+		this.servicioMatcoSucursal = servicioMatcoSucursal;
+	}
+
+	public MonedaFacade getServicioMatcoMoneda() {
+		return servicioMatcoMoneda;
+	}
+
+	public void setServicioMatcoMoneda(MonedaFacade servicioMatcoMoneda) {
+		this.servicioMatcoMoneda = servicioMatcoMoneda;
+	}
+
+	public ClienteFacade getServicioMatcoCliente() {
+		return servicioMatcoCliente;
+	}
+
+	public void setServicioMatcoCliente(ClienteFacade servicioMatcoCliente) {
+		this.servicioMatcoCliente = servicioMatcoCliente;
+	}
+
+	public ServicioMatcoParidadProveedor getServicioMatcoParidad() {
+		return servicioMatcoParidad;
+	}
+
+	public void setServicioMatcoParidad(
+			ServicioMatcoParidadProveedor servicioMatcoParidad) {
+		this.servicioMatcoParidad = servicioMatcoParidad;
+	}
+
+	public ServicioMatcoOtroCargoProveedor getServicio() {
+		return servicio;
+	}
+
+	public void setServicio(ServicioMatcoOtroCargoProveedor servicio) {
+		this.servicio = servicio;
+	}
+
+	public ServicioMatcoAccesosGeneralesProveedor getServicioAccesosGenerales() {
+		return servicioAccesosGenerales;
+	}
+
+	public void setServicioAccesosGenerales(
+			ServicioMatcoAccesosGeneralesProveedor servicioAccesosGenerales) {
+		this.servicioAccesosGenerales = servicioAccesosGenerales;
+	}
+
+	public ServicioMatcoDetalleAccesosProveedor getServicioDetalleAccesos() {
+		return servicioDetalleAccesos;
+	}
+
+	public void setServicioDetalleAccesos(
+			ServicioMatcoDetalleAccesosProveedor servicioDetalleAccesos) {
+		this.servicioDetalleAccesos = servicioDetalleAccesos;
+	}
+
+	public MatcoReciboCaja getEntidadSeleccionada() {
+		return entidadSeleccionada;
+	}
+
+	public void setEntidadSeleccionada(MatcoReciboCaja entidadSeleccionada) {
+		this.entidadSeleccionada = entidadSeleccionada;
+	}
+
+	public MatcoReciboCajaDetalle getEntidadDetalleSeleccionada() {
+		return entidadDetalleSeleccionada;
+	}
+
+	public void setEntidadDetalleSeleccionada(
+			MatcoReciboCajaDetalle entidadDetalleSeleccionada) {
+		this.entidadDetalleSeleccionada = entidadDetalleSeleccionada;
+	}
+
+	public MatcoReciboCaja getEntidadInicial() {
+		return entidadInicial;
+	}
+
+	public void setEntidadInicial(MatcoReciboCaja entidadInicial) {
+		this.entidadInicial = entidadInicial;
+	}
+
+	public MatcoReciboCaja getEntidadActual() {
+		return entidadActual;
+	}
+
+	public void setEntidadActual(MatcoReciboCaja entidadActual) {
+		this.entidadActual = entidadActual;
+	}
+
+	public Sucursal getSucursalActual() {
+		return sucursalActual;
+	}
+
+	public void setSucursalActual(Sucursal sucursalActual) {
+		this.sucursalActual = sucursalActual;
+	}
+
+	public List<Almacen> getListaAlmacen() {
+		return listaAlmacen;
+	}
+
+	public void setListaAlmacen(List<Almacen> listaAlmacen) {
+		this.listaAlmacen = listaAlmacen;
+	}
+
+	public ListaMatcoTipoDocumento getListaTipoDocumento() {
+		return listaTipoDocumento;
+	}
+
+	public void setListaTipoDocumento(ListaMatcoTipoDocumento listaTipoDocumento) {
+		this.listaTipoDocumento = listaTipoDocumento;
+	}
+
+	public ListaMatcoTipoDocumento getListaTipoDocumentoCargos() {
+		return listaTipoDocumentoCargos;
+	}
+
+	public void setListaTipoDocumentoCargos(
+			ListaMatcoTipoDocumento listaTipoDocumentoCargos) {
+		this.listaTipoDocumentoCargos = listaTipoDocumentoCargos;
+	}
+
+	public ListaMatcoTipoMovimiento getListaTipoMovimiento() {
+		return listaTipoMovimiento;
+	}
+
+	public void setListaTipoMovimiento(
+			ListaMatcoTipoMovimiento listaTipoMovimiento) {
+		this.listaTipoMovimiento = listaTipoMovimiento;
+	}
+
+	public List<Moneda> getListaMoneda() {
+		return listaMoneda;
+	}
+
+	public void setListaMoneda(List<Moneda> listaMoneda) {
+		this.listaMoneda = listaMoneda;
+	}
+
+	public ListaMatcoOtroCargo getLista() {
+		return lista;
+	}
+
+	public void setLista(ListaMatcoOtroCargo lista) {
+		this.lista = lista;
+	}
+
+	public List<Cliente> getListaClientes() {
+		return listaClientes;
+	}
+
+	public void setListaClientes(List<Cliente> listaClientes) {
+		this.listaClientes = listaClientes;
+	}
+
+	public ListaMatcoAccesosGenerales getListaAccesosGenerales() {
+		return listaAccesosGenerales;
+	}
+
+	public void setListaAccesosGenerales(
+			ListaMatcoAccesosGenerales listaAccesosGenerales) {
+		this.listaAccesosGenerales = listaAccesosGenerales;
+	}
+
+	public ListaMatcoDetalleAccesos getListaDetalleAccesos() {
+		return listaDetalleAccesos;
+	}
+
+	public void setListaDetalleAccesos(
+			ListaMatcoDetalleAccesos listaDetalleAccesos) {
+		this.listaDetalleAccesos = listaDetalleAccesos;
+	}
+
+	public ListaMatcoDireccion getListaDireccion() {
+		return listaDireccion;
+	}
+
+	public void setListaDireccion(ListaMatcoDireccion listaDireccion) {
+		this.listaDireccion = listaDireccion;
+	}
+
+	public ListaMatcoTipoPago getListaTipoPago() {
+		return listaTipoPago;
+	}
+
+	public void setListaTipoPago(ListaMatcoTipoPago listaTipoPago) {
+		this.listaTipoPago = listaTipoPago;
+	}
+
+	public ListaMatcoMetodoPago getListaMetodoPago() {
+		return listaMetodoPago;
+	}
+
+	public void setListaMetodoPago(ListaMatcoMetodoPago listaMetodoPago) {
+		this.listaMetodoPago = listaMetodoPago;
+	}
+
+	public MatcoReciboCajaDetalle getDetalleActual() {
+		return detalleActual;
+	}
+
+	public void setDetalleActual(MatcoReciboCajaDetalle detalleActual) {
+		this.detalleActual = detalleActual;
+	}
+
+	public LinkedHashMap<String, MatcoReciboCajaDetalle> getListaClavesCargos() {
+		return listaClavesCargos;
+	}
+
+	public void setListaClavesCargos(
+			LinkedHashMap<String, MatcoReciboCajaDetalle> listaClavesCargos) {
+		this.listaClavesCargos = listaClavesCargos;
+	}
+
+	public Almacen getParamAlmacen() {
+		return paramAlmacen;
+	}
+
+	public void setParamAlmacen(Almacen paramAlmacen) {
+		this.paramAlmacen = paramAlmacen;
+	}
+
+	public MatcoTipoDocumento getParamTipoDocumento() {
+		return paramTipoDocumento;
+	}
+
+	public void setParamTipoDocumento(MatcoTipoDocumento paramTipoDocumento) {
+		this.paramTipoDocumento = paramTipoDocumento;
+	}
+
+	public Almacen getAlmacenAutoComplete() {
+		return almacenAutoComplete;
+	}
+
+	public void setAlmacenAutoComplete(Almacen almacenAutoComplete) {
+		this.almacenAutoComplete = almacenAutoComplete;
+	}
+
+	public MatcoTipoDocumento getTipoDocumentoAutoComplete() {
+		return tipoDocumentoAutoComplete;
+	}
+
+	public void setTipoDocumentoAutoComplete(
+			MatcoTipoDocumento tipoDocumentoAutoComplete) {
+		this.tipoDocumentoAutoComplete = tipoDocumentoAutoComplete;
+	}
+
+	public MatcoTipoMovimiento getTipoMovimientoAutoComplete() {
+		return tipoMovimientoAutoComplete;
+	}
+
+	public void setTipoMovimientoAutoComplete(
+			MatcoTipoMovimiento tipoMovimientoAutoComplete) {
+		this.tipoMovimientoAutoComplete = tipoMovimientoAutoComplete;
+	}
+
+	public MatcoTipoDocumento getTipoDocumentoCargoAutoComplete() {
+		return tipoDocumentoCargoAutoComplete;
+	}
+
+	public void setTipoDocumentoCargoAutoComplete(
+			MatcoTipoDocumento tipoDocumentoCargoAutoComplete) {
+		this.tipoDocumentoCargoAutoComplete = tipoDocumentoCargoAutoComplete;
+	}
+
+	public Almacen getAlmacenGeneralAutoComplete() {
+		return almacenGeneralAutoComplete;
+	}
+
+	public void setAlmacenGeneralAutoComplete(Almacen almacenGeneralAutoComplete) {
+		this.almacenGeneralAutoComplete = almacenGeneralAutoComplete;
+	}
+
+	public Almacen getAlmacenCargoAutoComplete() {
+		return almacenCargoAutoComplete;
+	}
+
+	public void setAlmacenCargoAutoComplete(Almacen almacenCargoAutoComplete) {
+		this.almacenCargoAutoComplete = almacenCargoAutoComplete;
+	}
+
+	public Cliente getClienteAutoComplete() {
+		return clienteAutoComplete;
+	}
+
+	public void setClienteAutoComplete(Cliente clienteAutoComplete) {
+		this.clienteAutoComplete = clienteAutoComplete;
+	}
+
+	public Moneda getMonedaAutoComplete() {
+		return monedaAutoComplete;
+	}
+
+	public void setMonedaAutoComplete(Moneda monedaAutoComplete) {
+		this.monedaAutoComplete = monedaAutoComplete;
+	}
+
+	public MatcoDireccion getDireccionAutoComplete() {
+		return direccionAutoComplete;
+	}
+
+	public void setDireccionAutoComplete(MatcoDireccion direccionAutoComplete) {
+		this.direccionAutoComplete = direccionAutoComplete;
+	}
+
+	public MatcoTipoPago getTipoPagoAutoComplete() {
+		return tipoPagoAutoComplete;
+	}
+
+	public void setTipoPagoAutoComplete(MatcoTipoPago tipoPagoAutoComplete) {
+		this.tipoPagoAutoComplete = tipoPagoAutoComplete;
+	}
+
+	public MatcoMetodoPago getMetodoPagoAutoComplete() {
+		return metodoPagoAutoComplete;
+	}
+
+	public void setMetodoPagoAutoComplete(MatcoMetodoPago metodoPagoAutoComplete) {
+		this.metodoPagoAutoComplete = metodoPagoAutoComplete;
+	}
+
+	public MatcoAccesosGenerales getAccesoDerechoAdministrar() {
+		return accesoDerechoAdministrar;
+	}
+
+	public void setAccesoDerechoAdministrar(
+			MatcoAccesosGenerales accesoDerechoAdministrar) {
+		this.accesoDerechoAdministrar = accesoDerechoAdministrar;
+	}
+
+	public MatcoAccesosGenerales getAccesoDerechoAgregar() {
+		return accesoDerechoAgregar;
+	}
+
+	public void setAccesoDerechoAgregar(
+			MatcoAccesosGenerales accesoDerechoAgregar) {
+		this.accesoDerechoAgregar = accesoDerechoAgregar;
+	}
+
+	public MatcoAccesosGenerales getAccesoDerechoConsultar() {
+		return accesoDerechoConsultar;
+	}
+
+	public void setAccesoDerechoConsultar(
+			MatcoAccesosGenerales accesoDerechoConsultar) {
+		this.accesoDerechoConsultar = accesoDerechoConsultar;
+	}
+
+	public MatcoAccesosGenerales getAccesoDerechoEliminar() {
+		return accesoDerechoEliminar;
+	}
+
+	public void setAccesoDerechoEliminar(
+			MatcoAccesosGenerales accesoDerechoEliminar) {
+		this.accesoDerechoEliminar = accesoDerechoEliminar;
+	}
+
+	public MatcoAccesosGenerales getAccesoDerechoCancelar() {
+		return accesoDerechoCancelar;
+	}
+
+	public void setAccesoDerechoCancelar(
+			MatcoAccesosGenerales accesoDerechoCancelar) {
+		this.accesoDerechoCancelar = accesoDerechoCancelar;
+	}
+
+	public static SimpleDateFormat getFormatofecha() {
+		return formatoFecha;
+	}
+
+	public OtroCargoBean() throws IOException {
+		super();
+		ConfiguracionGeneralAplicacion cga = AccesoContexto
+				.<ConfiguracionGeneralAplicacion> getManageBean("configuracionGeneralAplicacion");
+		inicializarDocumento(this);
+		inicializarListado();
+	}
+
+	@Override
+	public void inicializarEntidad(String pAccion) {
+
+		super.ocultarMenuCatalogos();
+
+		setTitulo(pAccion + " Recibo de Caja");
+		if (pAccion.equals("Agregar")) {
+			limpiar();
+			if (obtenerEntidadesEjes()) {
+				iniciarCamposDefault();
+				calcularConsecutivo();
+				inicializarEntidad();
+				this.accion = pAccion;
+
+			} else {
+				this.accion = "salir";
+			}
+		} else {
+			obtenerEntidadSelecionada();
+			this.accion = pAccion;
+		}
+		super.setAccion(pAccion);
+		ConfiguracionGeneralAplicacion cga = AccesoContexto
+				.<ConfiguracionGeneralAplicacion> getManageBean("configuracionGeneralAplicacion");
+		cga.setAccion(accion);
+
+		Integer tarea = 0;
+		if (accion.equals("Agregar")) {
+			tarea = 1;
+		}
+		if (accion.equals("Consultar")) {
+			tarea = 2;
+		}
+		if (accion.equals("Eliminar")) {
+			tarea = 3;
+		}
+		if (accion.equals("Administrar")) {
+			tarea = 6;
+		}
+		if (accion.equals("Cancelar")) {
+			tarea = 7;
+		}
+		obtenerDerechosPorControl(tarea);
+
+		super.agregarBreadCrumb(pAccion, "#");
+	}
+
+	@Override
+	public boolean mostrarEntidadSeleccionada() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	/*
+	 * Método para obtener el folio consecutivo de la entidad
+	 */
+	public int obtenerConsecutivo() {
+		int resultado = 0;
+		if (serie != null && serie.length() > 0 && idAlmacen > 0) {
+
+			try {
+				FiltroMatcoOtroCargo filtro = FiltroMatcoOtroCargo
+						.filtroMatcoOtroCargoConsecutivo(serie, idAlmacen);
+				resultado = servicio.matcootrocargoConsecutivo(sesion, filtro);
+			} catch (Exception ex) {
+				Mensajes.error(ex.getMessage(), "");
+				log.info("Error al obtener Folio Consecutivo");
+			}
+		}
+		return resultado;
+	}
+
+	@Override
+	/*
+	 * Método para obtener los campos de la entidad y mostrarlos en los
+	 * componentes
+	 */
+	public boolean obtenerEntidadSelecionada() {
+		boolean resultado = false;
+		try {
+
+			FiltroMatcoReciboCaja filtro = FiltroMatcoReciboCaja
+					.filtroMatcoReciboCajaObtenerPK(
+							entidadSeleccionada.getSerie(),
+							entidadSeleccionada.getIdAlmacen(),
+							entidadSeleccionada.getFolio());
+//			entidadSeleccionada = servicio.matcootrocargoObtenerEntidad(
+//					sesion, filtro);
+
+			almacenAutoComplete = servicioMatcoAlmacen
+					.obtenerAlmacenPorId((short) entidadSeleccionada
+							.getIdAlmacen());
+
+			FiltroMatcoTipoDocumento filtroTD = FiltroMatcoTipoDocumento
+					.filtroMatcoTipoDocumentoObtenerPK(entidadSeleccionada
+							.getSerie());
+			tipoDocumentoAutoComplete = servicioMatcoTipoDocumento
+					.matcotipodocumentoObtenerEntidad(sesion, filtroTD);
+			obtenerListaTipoMovimiento();
+
+			FiltroMatcoTipoMovimiento filtroTM = FiltroMatcoTipoMovimiento
+					.filtroMatcoTipoMovimientoObtenerPK(entidadSeleccionada
+							.getTipoMovimiento());
+			tipoMovimientoAutoComplete = servicioMatcoTipoMovimiento
+					.matcotipomovimientoObtenerEntidad(sesion, filtroTM);
+
+			clienteAutoComplete = servicioMatcoCliente
+					.obtenerClientePorId(entidadSeleccionada.getIdCliente());
+
+			clienteConsulta = clienteAutoComplete.getCodigoFormateado() + " - "
+					+ clienteAutoComplete.getRazonSocialGrid();
+			obtenerListaMoneda();
+			obtenerListaTipoPago();
+			obtenerListaMetodoPago();
+
+			monedaAutoComplete = obtenerMoneda(entidadSeleccionada
+					.getIdMoneda());
+			idAlmacen = entidadSeleccionada.getIdAlmacen();
+			serie = entidadSeleccionada.getSerie();
+			folio = entidadSeleccionada.getFolio();
+			idCliente = entidadSeleccionada.getIdCliente();
+			fecha = entidadSeleccionada.getFecha();
+
+			paridad = entidadSeleccionada.getParidad();
+
+			fechaCancelacion = entidadSeleccionada.getFechaCancelacion();
+			listaAlmacen = new ArrayList<Almacen>();
+			listaAlmacen.add(almacenAutoComplete);
+
+			listaTipoDocumento = new ListaMatcoTipoDocumento();
+			listaTipoDocumento.add(tipoDocumentoAutoComplete);
+
+			listaTipoMovimiento = new ListaMatcoTipoMovimiento();
+			listaTipoMovimiento.add(tipoMovimientoAutoComplete);
+
+			listaClientes = new ArrayList<Cliente>();
+			listaClientes.add(clienteAutoComplete);
+
+			listaMoneda = new ArrayList<Moneda>();
+			listaMoneda.add(monedaAutoComplete);
+
+			actualizarSucursal();
+			resultado = true;
+		} catch (Exception ex) {
+			Mensajes.error(ex.getMessage(), "");
+			log.info("Error al obtener Entidad");
+		}
+		return resultado;
+	}
+
+	@Override
+	/*
+	 * Método en el que se obtiene la lista de Facturas Otros Cargos tomando
+	 * como parámetro el almacen seleccionado del listado, actualizando la tabla
+	 * del listado
+	 * 
+	 * @see com.frameworkui.interfaces.IDocumentoBean#obtenerLista()
+	 */
+	public void obtenerLista() {
+		try {
+			FiltroMatcoOtroCargo filtro = FiltroMatcoOtroCargo
+					.filtroMatcoOtroCargoPorSerieAlmacen(
+							paramTipoDocumento.getTipoDocumento(),
+							paramAlmacen.getAlmacen());
+
+			lista = servicio.matcootrocargoObtener(sesion, filtro);
+			
+
+		} catch (Exception ex) {
+			Mensajes.error(ex.getMessage(), "");
+			log.info("Error al obtener Lista de Recibos de Caja");
+		}
+
+	}
+
+	@Override
+	/*
+	 * Método para guardar los datos capturados en la vista hacia la base de
+	 * datos y limpia los controles para iniciar una nueva captura del documento
+	 */
+	public boolean guardar() {
+		boolean resultado = false;
+		MatcoReciboCaja entidad = new MatcoReciboCaja();
+		try {
+			entidad = obtenerEntidad();
+			
+			//entidad = servicio.matcootrocargoInsertar(sesion, entidad);
+			if (entidad != null) {
+				//lista.add(entidad);
+				resultado = true;
+			}
+			// imprimir();
+			limpiar();
+			iniciarCamposDefault();
+			calcularConsecutivo();
+
+			resetearCampos();
+			RequestContext.getCurrentInstance().update("frm:datos");
+			// RequestContext.getCurrentInstance().execute(
+			// "establecerFoco('frm:tipoDocumento')");
+
+		} catch (Exception ex) {
+			Mensajes.error(ex.getMessage(), "");
+			log.info(ex.getMessage());
+		}
+
+		return resultado;
+	}
+
+	@Override
+	public void modificar() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void eliminar() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void cancelar() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void cancelarCambios() {
+		limpiar();
+		iniciarCamposDefault();
+		calcularConsecutivo();
+		inicializarEntidad();
+		resetearCampos();
+		RequestContext.getCurrentInstance().execute(
+				"establecerFoco('frm:tipoDocumento')");
+
+	}
+
+	@Override
+	public void previoSalir() {
+		if (accion.equals("Consultar")) {
+			obtenerListaAlmacen();
+			obtenerListaTipoDocumento();
+		}
+		fechaCancelacion = null;
+		fecha = null;
+
+	}
+
+	@Override
+	public boolean compararCambios() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	/*
+	 * Método en el que se realizan las configuraciones e inicializaciones
+	 * necesarias para que el listado funcione correctamente.
+	 */
+	private void inicializarListado() {
+		Locale local = new Locale("es", "MX");
+		FacesContext.getCurrentInstance().getViewRoot().setLocale(local);
+		derechoAgregar = false;
+		derechoConsultar = false;
+		derechoEliminar = false;
+		derechoCancelar = false;
+		habilitarOpcionCancelar = false;
+		habilitarOpcionDepurar = false;
+		habilitarOpcionConsultar = false;
+		mostrarBotonLimpiarCliente = false;
+		mostrarBotonLimpiarDireccion = false;
+		habilitarOpcionCancelar = false;
+		habilitarOpcionDepurar = false;
+		sesion = new Sesion();
+		servicioMatcoTipoDocumento = new ServicioMatcoTipoDocumentoProveedor(
+				sesion);
+		servicioMatcoTipoMovimiento = new ServicioMatcoTipoMovimientoProveedor(
+				sesion);
+		servicioMatcoAlmacen = new AlmacenFacade();
+		servicioMatcoSucursal = new SucursalFacade();
+		servicioMatcoMoneda = new MonedaFacade();
+		servicio = new ServicioMatcoOtroCargoProveedor(sesion);
+		servicioMatcoCliente = new ClienteFacade();
+		servicioAccesosGenerales = new ServicioMatcoAccesosGeneralesProveedor(
+				sesion);
+		servicioDetalleAccesos = new ServicioMatcoDetalleAccesosProveedor(
+				sesion);
+		servicioMatcoParidad = new ServicioMatcoParidadProveedor(sesion);
+		servicioMatcoDireccionProveedor = new ServicioMatcoDireccionProveedor(
+				sesion);
+		servicioMatcoTipoPago = new ServicioMatcoTipoPagoProveedor(sesion);
+		servicioMatcoMetodoPago = new ServicioMatcoMetodoPagoProveedor(sesion);
+		servicioMatcoCargo = new ServicioMatcoCargoProveedor(sesion);
+
+		clienteAutoComplete = new Cliente();
+		direccionAutoComplete = new MatcoDireccion();
+		listaDireccion = new ListaMatcoDireccion();
+
+		obtenerListaTipoDocumento();
+		obtenerListaAlmacen();
+		obtenerListaMoneda();
+		obtenerListaTipoPago();
+		obtenerListaMetodoPago();
+		obtenerLista();
+
+		opcionesEstatus = crearOpcionesFiltroEstatus();
+		opcionesMoneda = crearOpcionesFiltroMonedas();
+
+	}
+
+	/*
+	 * Método para obtener la lista de almacenes
+	 */
+	public void obtenerListaAlmacen() {
+		try {
+			listaAlmacen = servicioMatcoAlmacen.obtenerTodosAlmacenesActivos();
+
+		} catch (Exception ex) {
+			Mensajes.error(ex.getMessage(), "");
+			log.info("Error al obtener Lista de Almacenes");
+		}
+		if (listaAlmacen != null && listaAlmacen.size() >= 1) {
+			setParamAlmacen(listaAlmacen.get(0));
+			paramIdAlmacen = paramAlmacen.getAlmacen();
+		}
+		AlmacenConverter.listaAlmacenes = new ArrayList<Almacen>();
+		AlmacenConverter.listaAlmacenes.addAll(listaAlmacen);
+	}
+
+	/*
+	 * Método para obtener la lista de tipos de movimiento
+	 */
+	public void obtenerListaTipoDocumento() {
+		FiltroMatcoTipoDocumento filtro = FiltroMatcoTipoDocumento
+				.filtroMatcoTipoDocumentoObtenerClase("C");
+		try {
+			listaTipoDocumento = servicioMatcoTipoDocumento
+					.matcotipodocumentoObtener(sesion, filtro);
+		} catch (Exception ex) {
+			Mensajes.error(ex.getMessage(), "");
+			log.info("Error al obtener Lista de Tipos de Documentos");
+		}
+		if (listaTipoDocumento != null && listaTipoDocumento.size() >= 1) {
+			setParamTipoDocumento(listaTipoDocumento.get(0));
+			paramIdTipoDocumento = paramTipoDocumento.getTipoDocumento();
+
+			TipoDocumentoConverter.listaTiposDocumento = new ListaMatcoTipoDocumento();
+			TipoDocumentoConverter.listaTiposDocumento
+					.addAll(listaTipoDocumento);
+
+		}
+	}
+
+	public void obtenerListaTipoDocumentoCargo() {
+		FiltroMatcoTipoDocumento filtro = FiltroMatcoTipoDocumento
+				.filtroMatcoTipoDocumentoObtenerClase("C");
+		try {
+			listaTipoDocumentoCargos = servicioMatcoTipoDocumento
+					.matcotipodocumentoObtener(sesion, filtro);
+		} catch (Exception ex) {
+			Mensajes.error(ex.getMessage(), "");
+			log.info("Error al obtener Lista de Tipos de Documentos Clase 'C'");
+		}
+		if (listaTipoDocumentoCargos != null
+				&& listaTipoDocumentoCargos.size() >= 1) {
+			TipoDocumentoConverter.listaTiposDocumentoSecundario = new ListaMatcoTipoDocumento();
+			TipoDocumentoConverter.listaTiposDocumentoSecundario
+					.addAll(listaTipoDocumentoCargos);
+
+		}
+
+	}
+
+	/*
+	 * Método que obtiene la lista de monedas que se muestran en el autocomplete
+	 * de monedas
+	 */
+	public void obtenerListaMoneda() {
+		listaMoneda = new ArrayList<Moneda>();
+		try {
+			listaMoneda = servicioMatcoMoneda.obtenerTodasMonedas();
+		} catch (Exception ex) {
+			Mensajes.error(ex.getMessage(), "");
+			log.info("Error al obtener Lista de Monedas");
+		}
+	}
+
+	public void obtenerListaTipoPago() {
+		listaTipoPago = new ListaMatcoTipoPago();
+		ListaMatcoTipoPago listaAuxiliar = new ListaMatcoTipoPago();
+		try {
+			FiltroMatcoTipoPago filtro = FiltroMatcoTipoPago
+					.filtroMatcoTipoPagoObtenerDefault();
+			listaAuxiliar = servicioMatcoTipoPago.matcotipopagoObtener(sesion,
+					filtro);
+
+			MatcoTipoPago entidad = new MatcoTipoPago();
+			entidad.setTipoPago("Selecciona un Tipo de Pago");
+			listaTipoPago.add(0, entidad);
+			for (MatcoTipoPago matcoTipoPago : listaAuxiliar) {
+				if (!matcoTipoPago.getClase().toUpperCase().equals("CRÉDITO")) {
+					listaTipoPago.add(matcoTipoPago);
+				}
+			}
+
+			TipoPagoConverter.listaTipoPago = listaTipoPago;
+		} catch (Exception ex) {
+			Mensajes.error(ex.getMessage(), "");
+			log.info("Error al obtener Lista de Tipos de Pago");
+		}
+	}
+
+	public void obtenerListaMetodoPago() {
+		listaMetodoPago = new ListaMatcoMetodoPago();
+		try {
+			FiltroMatcoMetodoPago filtro = FiltroMatcoMetodoPago
+					.filtroMatcoMetodoPagoObtenerDefault();
+			listaMetodoPago = servicioMatcoMetodoPago.matcometodopagoObtener(
+					sesion, filtro);
+			MatcoMetodoPago entidad = new MatcoMetodoPago();
+			entidad.setIdMetodoPago("Selecciona un Método de Pago");
+			entidad.setDescripcionMetodoPago("");
+			listaMetodoPago.add(0, entidad);
+
+			MetodoPagoConverter.listaMetodoPago = listaMetodoPago;
+			solicitarCuentaPago = false;
+
+		} catch (Exception ex) {
+			Mensajes.error(ex.getMessage(), "");
+			log.info("Error al obtener Lista de Métodos de Pago");
+		}
+	}
+
+	/*
+	 * Método que regresa las opciones del fitro Estatus del listado
+	 */
+	public SelectItem[] crearOpcionesFiltroEstatus() {
+		SelectItem[] opciones = new SelectItem[3];
+		opciones[0] = new SelectItem("", "Todas");
+		opciones[1] = new SelectItem("Activo", "Activo");
+		opciones[2] = new SelectItem("Cancelado", "Cancelado");
+		return opciones;
+	}
+
+	/*
+	 * Método que regresa las opciones del fitro Moneda del listado
+	 */
+	public SelectItem[] crearOpcionesFiltroMonedas() {
+		SelectItem[] opciones = new SelectItem[listaMoneda.size() + 1];
+		int i = 1;
+		opciones[0] = new SelectItem("", "Todas");
+		for (Moneda elemento : listaMoneda) {
+			if (elemento.getMoneda().length() > 0) {
+				opciones[i] = new SelectItem(elemento.getMoneda(),
+						elemento.getMoneda());
+				i++;
+			}
+		}
+		return opciones;
+	}
+
+	/*
+	 * Método que se utiliza para limpiar los campos de la captura
+	 */
+	public void limpiar() {
+		listaClavesCargos = new LinkedHashMap<String, MatcoReciboCajaDetalle>();
+		
+		deshabilitarCampoCliente = false;
+		mostrarBotonLimpiarCliente = false;
+		mostrarBotonLimpiarDireccion = false;
+		clienteAutoComplete = new Cliente();
+		direccionAutoComplete = new MatcoDireccion();
+		listaDireccion = new ListaMatcoDireccion();
+		enModoEdicion = false;
+		esAbonoIndependiente = true;
+		MatcoDireccion entidadDireccion = new MatcoDireccion();
+		entidadDireccion.setCalle("");
+		entidadDireccion.setPoblacion("");
+		listaDireccion.add(entidadDireccion);
+		saldoCargo = 0;
+		totalCargos = 0;
+		tipoMovimientoAutoComplete = new MatcoTipoMovimiento();
+		monedaAutoComplete = new Moneda();
+		direccionCompuesta = "";
+		for (Moneda item : listaMoneda) {
+			if (item.getMoneda().equals("MN")) {
+				monedaAutoComplete = item;
+				break;
+			}
+		}
+		paridad = 1.0000;
+		fecha = new Date();
+
+		RequestContext.getCurrentInstance().execute("ejecutarLimpiar();");
+	}
+
+	/*
+	 * Método en el cual se obtienen las listas de las entidades ejes Tipos de
+	 * Documento, Almacenes, Monedas
+	 */
+	public boolean obtenerEntidadesEjes() {
+		boolean resultado = false;
+
+		busquedaClienteAnterior = "";
+		listaClientes = new ArrayList<Cliente>();
+		listaDireccion = new ListaMatcoDireccion();
+		if (listaTipoDocumento == null || listaTipoDocumento.size() < 1) {
+			Mensajes.error(
+					"Error. No existen Tipos de Documento registrados Clase = 'C",
+					"");
+			return resultado;
+		} else {
+			TipoDocumentoConverter.listaTiposDocumento = new ListaMatcoTipoDocumento();
+			TipoDocumentoConverter.listaTiposDocumento
+					.addAll(listaTipoDocumento);
+		}
+
+		if (listaAlmacen == null || listaAlmacen.size() == 0) {
+			Mensajes.error("Error. No existen Almacenes registrados", "");
+			return resultado;
+		} else {
+			AlmacenConverter.listaAlmacenes = new ArrayList<Almacen>();
+			AlmacenConverter.listaAlmacenes.addAll(listaAlmacen);
+			almacenAutoComplete = listaAlmacen.get(0);
+			idAlmacen = Integer.parseInt(almacenAutoComplete.getAlmacen()
+					.toString());
+		}
+		obtenerListaMoneda();
+		if (listaMoneda == null || listaMoneda.size() == 0) {
+			Mensajes.error("Error. No existen Monedas registradas", "");
+			return resultado;
+		} else {
+			MonedaConverter.listaMonedas = new ArrayList<Moneda>();
+			MonedaConverter.listaMonedas.addAll(listaMoneda);
+		}
+		obtenerListaTipoDocumentoCargo();
+
+		resultado = true;
+		return resultado;
+	}
+
+	/*
+	 * Método que se utiliza para inicializar el elemento predeterminado de los
+	 * campos almacén, tipo de documento y obtener la lista de tipos de
+	 * movimiento correspondientes al tipo de documento
+	 */
+	@SuppressWarnings("deprecation")
+	private void iniciarCamposDefault() {
+		if (almacenAutoComplete == null
+				|| almacenAutoComplete.getAlmacen() == 0) {
+			if (listaAlmacen != null || listaAlmacen.size() > 0) {
+				almacenAutoComplete = listaAlmacen.get(0);
+			}
+		}
+		idAlmacen = Integer.parseInt(almacenAutoComplete.getAlmacen()
+				.toString());
+		if (tipoDocumentoAutoComplete == null
+				|| tipoDocumentoAutoComplete.getTipoDocumento().length() == 0) {
+			if (listaTipoDocumento != null && listaTipoDocumento.size() >= 1) {
+				tipoDocumentoAutoComplete = listaTipoDocumento.get(0);
+			}
+		}
+		serie = tipoDocumentoAutoComplete.getTipoDocumento();
+		obtenerListaTipoMovimiento();
+		if (monedaAutoComplete != null) {
+			idMoneda = monedaAutoComplete.getMoneda();
+		}
+		paridad = 1.00;
+		creadorPor = (String) AccesoContexto.getSesion()
+				.getAttribute("usuario");
+		capturo = creadorPor;
+		cuentaPago = "NO IDENTIFICADO";
+		idMetodoPago = "MN";
+		idTipoPago = "MN";
+		listaDireccion = new ListaMatcoDireccion();
+		direccionAutoComplete = new MatcoDireccion();
+
+		// tipoPago = "AA";
+		estatus = "A";
+		// nombreSucursal = "";
+		Date auxiliar = Librerias.obtenerFechaSinHora(new Date());
+		//
+		fecha = auxiliar;
+		// fechaCaptura = auxiliar;
+
+		fechaHoraCaptura = Librerias.obtenerFechaConHora(fecha);
+		fechaCancelacion = Librerias
+				.obtenerFechaSinHora(new Date(1899, 12, 31));
+		fechaHoraActualizacion = Librerias.obtenerFechaSinHora(new Date(1899,
+				12, 31));
+		actualizarSucursal();
+	}
+
+	public void calcularConsecutivo() {
+		folio = obtenerConsecutivo();
+	}
+
+	/*
+	 * Método para obtener los derechos por control del formulario de
+	 * mantenimiento
+	 */
+	private void obtenerDerechosPorControl(Integer tarea) {
+
+		accesoTipoDocumento = "";
+		accesoAlmacen = "";
+		accesoFolio = "";
+		accesoFecha = "";
+		accesoIdCliente = "";
+		accesoIdMoneda = "";
+		accesoParidad = "";
+		accesoTipoPago = "";
+		accesoMetodoPago = "";
+		accesoCuentaPago = "";
+		obtenerListaDetalleAccesos("FINANZAS",
+				AccesoConstante.FUNCIONALIDAD_RECIBOSCAJA, tarea);
+
+		for (MatcoDetalleAccesos detalleAccesos : listaDetalleAccesos) {
+			if (detalleAccesos.getIdCampo() != null) {
+				if (detalleAccesos.getIdCampo().equals("IDALMACEN")) {
+					accesoAlmacen = detalleAccesos.getPermiso();
+					continue;
+				}
+				if (detalleAccesos.getIdCampo().equals("CLIENTE")) {
+					accesoIdCliente = detalleAccesos.getPermiso();
+					continue;
+				}
+
+				if (detalleAccesos.getIdCampo().equals("FECHA")) {
+					accesoFecha = detalleAccesos.getPermiso();
+					continue;
+				}
+				if (detalleAccesos.getIdCampo().equals("FOLIO")) {
+					accesoFolio = detalleAccesos.getPermiso();
+					continue;
+				}
+
+				if (detalleAccesos.getIdCampo().equals("IDMONEDA")) {
+					accesoIdMoneda = detalleAccesos.getPermiso();
+					continue;
+				}
+				if (detalleAccesos.getIdCampo().equals("PARIDAD")) {
+					accesoParidad = detalleAccesos.getPermiso();
+					continue;
+				}
+
+				if (detalleAccesos.getIdCampo().equals("TIPODOCUMENTO")) {
+					accesoTipoDocumento = detalleAccesos.getPermiso();
+					continue;
+				}
+
+				if (detalleAccesos.getIdCampo().equals("TIPOPAGO")) {
+					accesoTipoPago = detalleAccesos.getPermiso();
+					continue;
+				}
+
+				if (detalleAccesos.getIdCampo().equals("METODOPAGO")) {
+					accesoMetodoPago = detalleAccesos.getPermiso();
+					continue;
+				}
+
+				if (detalleAccesos.getIdCampo().equals("CUENTAPAGO")) {
+					accesoCuentaPago = detalleAccesos.getPermiso();
+					continue;
+				}
+
+			}
+		}
+
+	}
+
+	/*
+	 * Método en el que se verifica el folio que ingreso el usuario validando
+	 * que exista y en su caso recalculando el folio consecutivo.
+	 */
+	public void validarFolio() {
+		if (existe()) {
+			String documentoActual = getDocumento();
+			Mensajes.error("El folio " + documentoActual
+					+ " ya existe, se recalculó el folio consecutivo", "");
+			calcularConsecutivo();
+		}
+	}
+
+	/*
+	 * Método en el que se verifica que el folio ingresado por el usuario exista
+	 * en la base de datos
+	 */
+	private boolean existe() {
+		boolean resultado = false;
+		if (getSerie() != null && getSerie().length() > 0 && getIdAlmacen() > 0
+				&& getFolio() > 0) {
+
+			try {
+				FiltroMatcoOtroCargo filtro = FiltroMatcoOtroCargo
+						.filtroMatcoOtroCargoObtenerPK(serie, idAlmacen, folio);
+				resultado = servicio.matcootrocargoExiste(sesion, filtro);
+			} catch (Exception ex) {
+				Mensajes.error(ex.getMessage(), "");
+				log.info("Error al validar si existe Folio");
+			}
+		}
+		return resultado;
+
+	}
+
+	public void inicializarEntidad() {
+
+		entidadInicial = new MatcoReciboCaja();
+		entidadInicial.setCapturo(capturo);
+
+	}
+
+	/*
+	 * Método del listado que se ejecuta al momento de seleccionar un elemento
+	 * de la tabla para habilitar los botones de la botonera con base a los
+	 * derechos de usuario.
+	 */
+	public void comportamientoRenglonSeleccionado() {
+		habilitarOpcionCancelar = false;
+		habilitarOpcionDepurar = false;
+		habilitarOpcionConsultar = false;
+		if (derechoCancelar) {
+			if (entidadSeleccionada != null
+					&& !entidadSeleccionada.getEstatus().equals("Cancelado")) {
+				habilitarOpcionCancelar = true;
+			}
+		}
+		if (derechoEliminar
+				&& (entidadSeleccionada == null || entidadSeleccionada
+						.getEstatus().equals("Cancelado"))) {
+			habilitarOpcionDepurar = true;
+		}
+
+		if (entidadSeleccionada != null && derechoConsultar) {
+			habilitarOpcionConsultar = true;
+		}
+		RequestContext.getCurrentInstance().update("frm:pnlBotones");
+		RequestContext.getCurrentInstance().update("frm:menuEmergente");
+	}
+
+	/*
+	 * Método que obtiene la paridad de la moneda y fecha del documento
+	 */
+	private void obtenerParidad() {
+		if (idMoneda.equals("MN")) {
+			paridad = 1.0000;
+			return;
+		}
+		try {
+			FiltroMatcoParidad filtro = FiltroMatcoParidad
+					.FiltroMatcoParidadObtenerAFecha(idMoneda, fecha);
+			ListaMatcoParidad paridadVenta = servicioMatcoParidad
+					.matcoparidadObtener(sesion, filtro);
+			if (paridadVenta != null && paridadVenta.size() > 0) {
+				paridad = paridadVenta.get(0).getParidadVenta();
+			}
+
+		} catch (Exception ex) {
+			Mensajes.error(ex.getMessage(), "");
+			log.info("Error al obtener Paridad");
+		}
+	}
+
+	/*
+	 * Método que se utiliza para inicializar el autocomplete de cliente y
+	 * deshabilitar el campo cliente
+	 */
+	public void borrarCampoCliente() {
+		clienteAutoComplete = new Cliente();
+		setDeshabilitarCampoCliente(false);
+		mostrarBotonLimpiarCliente = false;
+
+		listaDireccion = new ListaMatcoDireccion();
+		DireccionConverter.listaDirecciones = new ListaMatcoDireccion();
+		borrarCampoDireccion();
+		RequestContext.getCurrentInstance().reset("frm:botonLimpiarCliente");
+		RequestContext.getCurrentInstance().reset("frm:botonCliente");
+		RequestContext.getCurrentInstance().update("frm:botonLimpiarCliente");
+		RequestContext.getCurrentInstance().update("frm:botonCliente");
+	}
+
+	public void borrarCampoDireccion() {
+		direccionAutoComplete = new MatcoDireccion();
+		setDeshabilitarCampoDireccion(false);
+		mostrarBotonLimpiarDireccion = false;
+		direccionCompuesta = "";
+	}
+
+	/*
+	 * Método que se utiliza para habilitar el campo cliente y mostrar el botón
+	 */
+	public void inhabilitarCampoCliente() {
+		setDeshabilitarCampoCliente(true);
+		mostrarBotonLimpiarCliente = true;
+	}
+
+	public void inhabilitarCampoDireccion() {
+		setDeshabilitarCampoDireccion(true);
+		mostrarBotonLimpiarDireccion = true;
+	}
+
+	public void validarEntradaMantenimiento() {
+
+		if (getAccion() == null || getAccion() == ""
+				|| getAccion().equals("none")) {
+			FacesContext facesContext = FacesContext.getCurrentInstance();
+			facesContext.getApplication().getNavigationHandler()
+					.handleNavigation(facesContext, "", "salir");
+		} else {
+			super.agregarBreadCrumb();
+		}
+	}
+
+	/*
+	 * Método para obtener los derechos por funcionalidad del Documento(agregar,
+	 * consultar, cancelar, eliminar, administrar)
+	 */
+	public void obtenerDerechosPorFuncionalidad() {
+		super.ocultarMenuCatalogos();
+		if (!FacesContext.getCurrentInstance().isPostback()) {
+			derechoAgregar = false;
+			derechoConsultar = false;
+
+			obtenerListaAccesosGenerales("FINANZAS",
+					AccesoConstante.FUNCIONALIDAD_RECIBOSCAJA);
+
+			for (MatcoAccesosGenerales accesoGeneral : listaAccesosGenerales) {
+				if (accesoGeneral.getIdTarea() == AccesoConstante.TAREA_ADMINISTRAR) {
+					accesoDerechoAdministrar = accesoGeneral;
+				}
+				if (accesoGeneral.getIdTarea() == AccesoConstante.TAREA_AGREGAR) {
+					accesoDerechoAgregar = accesoGeneral;
+				}
+				if (accesoGeneral.getIdTarea() == AccesoConstante.TAREA_CONSULTAR) {
+					accesoDerechoConsultar = accesoGeneral;
+				}
+				if (accesoGeneral.getIdTarea() == AccesoConstante.TAREA_ELIMINAR) {
+					accesoDerechoEliminar = accesoGeneral;
+				}
+				if (accesoGeneral.getIdTarea() == AccesoConstante.TAREA_CANCELAR) {
+					accesoDerechoCancelar = accesoGeneral;
+				}
+			}
+
+			if (accesoDerechoAdministrar == null
+					|| accesoDerechoAdministrar.getAcceso().equals(
+							AccesoConstante.ACCESO_FUNCIONALIDAD_NINGUNO)) {
+				ConfiguracionGeneralAplicacion.redireccionInicio();
+				// accion = "redireccionar";
+				return;
+			}
+			if (accesoDerechoAgregar != null) {
+				derechoAgregar = accesoDerechoAgregar.getAcceso().equals(
+						AccesoConstante.ACCESO_FUNCIONALIDAD_NINGUNO) ? false
+						: true;
+			}
+			if (accesoDerechoConsultar != null) {
+				derechoConsultar = accesoDerechoConsultar.getAcceso().equals(
+						AccesoConstante.ACCESO_FUNCIONALIDAD_NINGUNO) ? false
+						: true;
+			}
+
+			if (accesoDerechoCancelar != null) {
+				derechoCancelar = accesoDerechoCancelar.getAcceso().equals(
+						AccesoConstante.ACCESO_FUNCIONALIDAD_NINGUNO) ? false
+						: true;
+			}
+			if (accesoDerechoEliminar != null) {
+				derechoEliminar = accesoDerechoEliminar.getAcceso().equals(
+						AccesoConstante.ACCESO_FUNCIONALIDAD_NINGUNO) ? false
+						: true;
+			}
+
+			accion = "none";
+		} else {
+			return;
+		}
+	}
+
+	/*
+	 * Método que recibe como parámetro rol y objeto, y obtiene los derechos a
+	 * la funcionalidad Facturas Otros Cargos
+	 */
+	public void obtenerListaAccesosGenerales(String rol, int objeto) {
+		FiltroMatcoAccesosGenerales filtro = FiltroMatcoAccesosGenerales
+				.filtroMatcoAccesosGeneralesObtenerPKMaestro(rol, objeto);
+
+		try {
+			listaAccesosGenerales = servicioAccesosGenerales
+					.matcoaccesosgeneralesObtener(sesion, filtro);
+		} catch (Exception e) {
+			log.error(e.getMessage());
+			Mensajes.error(e.getMessage(), "");
+		}
+	}
+
+	public void obtenerListaDetalleAccesos(String rol, int objeto, int tarea) {
+		FiltroMatcoDetalleAccesos filtro = FiltroMatcoDetalleAccesos
+				.filtroMatcoDetalleAccesosObtenerPKMaestro(rol, objeto, tarea);
+
+		try {
+			listaDetalleAccesos = servicioDetalleAccesos
+					.matcodetalleaccesosObtener(sesion, filtro);
+		} catch (Exception e) {
+			log.error(e.getMessage());
+			Mensajes.error(e.getMessage(), "");
+		}
+	}
+
+	/*
+	 * Método que se invoca al momento de dar click en el boton limpiar
+	 */
+	public void ejecutarCancelarCambios() {
+		cancelarCambios();
+		RequestContext.getCurrentInstance().execute(
+				"dialogoConfirmacionLimpiar.hide()");
+	}
+
+	/*
+	 * Método que se ejecuta al momento de realizar un cambio de página en la
+	 * tabla del listado
+	 */
+	public void cambiarPagina() {
+		entidadSeleccionada = null;
+		habilitarOpcionCancelar = false;
+		habilitarOpcionDepurar = false;
+		habilitarOpcionConsultar = false;
+
+		RequestContext.getCurrentInstance().update("frm:pnlBotones");
+
+	}
+
+	public String aceptarListener() {
+		super.liberarBreadCrumb();
+		fecha = null;
+		setFechaCancelacion(null);
+		return getOutcome();
+	}
+
+	/*
+	 * Método que se ejecuta cuando se selecciona un tipo de documento en el
+	 * cual se calcula el consecutivo del documento tomando como base el almacén
+	 * y el tipo de documento, asignando el valor al "Folio" de la captura.
+	 * Además actualiza los tipos de movimiento correspondientes al tipo de
+	 * documento seleccionado
+	 */
+	public void tipoDocumentoChangeListener(AjaxBehaviorEvent event) {
+		RequestContext.getCurrentInstance().reset("frm:tipoMovimiento");
+		// RequestContext.getCurrentInstance().reset("frm:folio");
+		if (tipoDocumentoAutoComplete == null) {
+			serie = "";
+		} else {
+			serie = tipoDocumentoAutoComplete.getTipoDocumento();
+		}
+		if (serie != null && !serie.equals("")) {
+			calcularConsecutivo();
+		} else {
+			setFolio(0);
+		}
+		obtenerListaTipoMovimiento();
+		RequestContext.getCurrentInstance().update("frm:tipoMovimiento");
+		// RequestContext.getCurrentInstance().update("frm:folio");
+
+		FacesContext.getCurrentInstance().renderResponse();
+	}
+
+	/*
+	 * Método que se ejecuta cuando se selecciona un almacén en el cual se
+	 * calcula el consecutivo del documento tomando como base el almacén y el
+	 * tipo de documento.
+	 */
+	public void almacenChangeListener(AjaxBehaviorEvent event) {
+		// RequestContext.getCurrentInstance().reset("frm:folio");
+		String id = event.getComponent().getClientId();
+
+		if (almacenAutoComplete == null) {
+			idAlmacen = 0;
+		} else {
+			idAlmacen = almacenAutoComplete.getAlmacen();
+		}
+		if (idAlmacen > 0) {
+			calcularConsecutivo();
+			actualizarSucursal();
+		} else {
+			setFolio(0);
+		}
+		RequestContext.getCurrentInstance().update("frm:folio");
+		RequestContext.getCurrentInstance().update("frm:panelDatos");
+
+		FacesContext.getCurrentInstance().renderResponse();
+	}
+
+	/*
+	 * Método que se ejecuta cuando se selecciona el almacén que se utiliza como
+	 * parámetro del listado actualizando la lista de documentos de la tabla.
+	 */
+	public void almacenParametroChangeListener(AjaxBehaviorEvent event) {
+		if (paramAlmacen == null) {
+			paramIdAlmacen = 0;
+		} else {
+			paramIdAlmacen = paramAlmacen.getAlmacen();
+		}
+		// FacesContext.getCurrentInstance().renderResponse();
+	}
+
+	/*
+	 * Método que se ejecuta cuando se selecciona el almacén que se utiliza como
+	 * parámetro del listado actualizando la lista de documentos de la tabla.
+	 */
+
+	public void tipoDocumentoParametroChangeListener(AjaxBehaviorEvent event) {
+		if (paramTipoDocumento == null) {
+			paramIdTipoDocumento = "";
+		} else {
+			serie = paramTipoDocumento.getTipoDocumento();
+		}
+
+		FacesContext.getCurrentInstance().renderResponse();
+	}
+
+	/*
+	 * Método para realizar la concatenación del Número de Cliente y Razón
+	 * social que se utiliza cuando se selecciona un cliente del autocomplete
+	 */
+	public String formatearCliente(int id, String codigo, String nombre) {
+		StringBuilder resultado = new StringBuilder();
+		if (id > 0) {
+			resultado.append(codigo);
+			resultado.append(" - ");
+			resultado.append(nombre);
+		}
+		return resultado.toString();
+	}
+
+	/*
+	 * Método que se utiliza para ocultar el botón de borrado de autocomplete
+	 * del cliente
+	 */
+	public void borrarclienteAutoComplete() {
+		mostrarBotonLimpiarCliente = false;
+	}
+
+	public void borrardireccionAutoComplete() {
+		mostrarBotonLimpiarDireccion = false;
+	}
+
+	public void habilitarBotonLimpiarCliente() {
+		mostrarBotonLimpiarCliente = true;
+
+	}
+
+	/*
+	 * Método que se utiliza para indicar que se debe borrar el contenido del
+	 * autocomplete del cliente
+	 */
+	public void limpiarControlCliente() {
+		mostrarBotonLimpiarCliente = false;
+	}
+
+	public void limpiarControlDireccion() {
+		mostrarBotonLimpiarDireccion = false;
+	}
+
+	/*
+	 * Método que recibe como parámetro el texto capturado en el autocomplete
+	 * del tipo documento, hace el llamado a la persistencia para obtener la
+	 * lista de tipos de documento que cumplan con el criterio y muestra la
+	 * lista para que el usuario seleccione el tipo de documento correspondiente
+	 */
+	public ListaMatcoTipoDocumento completeTipoDocumento(String query) {
+		ListaMatcoTipoDocumento resultado = new ListaMatcoTipoDocumento();
+		for (MatcoTipoDocumento matcoTipoDocumento : listaTipoDocumento) {
+			if (matcoTipoDocumento.getDescripcion().toLowerCase()
+					.contains(query.toLowerCase())) {
+				resultado.add(matcoTipoDocumento);
+			}
+		}
+
+		TipoDocumentoConverter.listaTiposDocumento = new ListaMatcoTipoDocumento();
+		TipoDocumentoConverter.listaTiposDocumento.addAll(resultado);
+
+		return resultado;
+	}
+
+	public ListaMatcoTipoDocumento completeTipoDocumentoCargos(String query) {
+		ListaMatcoTipoDocumento resultado = new ListaMatcoTipoDocumento();
+		for (MatcoTipoDocumento matcoTipoDocumento : listaTipoDocumentoCargos) {
+			if (matcoTipoDocumento.getDescripcion().toLowerCase()
+					.contains(query.toLowerCase())) {
+				resultado.add(matcoTipoDocumento);
+			}
+		}
+
+		TipoDocumentoConverter.listaTiposDocumentoSecundario = new ListaMatcoTipoDocumento();
+		TipoDocumentoConverter.listaTiposDocumentoSecundario.addAll(resultado);
+
+		return resultado;
+	}
+
+	/*
+	 * Método que se utiliza para concatenar la clave y descripción de tipo de
+	 * documento
+	 */
+	public String formatearTipoDocumento(String tipo, String descripcion) {
+		if (tipo == null || tipo.length() == 0) {
+			return "";
+		}
+		return tipo + " - " + descripcion;
+	}
+
+	/*
+	 * Método que recibe como parámetro el texto capturado en el autocomplete
+	 * del tipo movimiento, hace el llamado a la persistencia para obtener la
+	 * lista de tipos de movimiento que cumplan con el criterio y muestra la
+	 * lista para que el usuario seleccione el tipo de movimiento
+	 * correspondiente
+	 */
+	public ListaMatcoTipoMovimiento completeTipoMovimiento(String query) {
+		ListaMatcoTipoMovimiento resultado = new ListaMatcoTipoMovimiento();
+		if (TipoMovimientoConverter.listaTiposMovimiento == null
+				|| TipoMovimientoConverter.listaTiposMovimiento.size() == 0) {
+			TipoMovimientoConverter.listaTiposMovimiento = new ListaMatcoTipoMovimiento();
+		}
+		for (MatcoTipoMovimiento matcoTipoMovimiento : listaTipoMovimiento) {
+
+			if (matcoTipoMovimiento.getDescripcion().toLowerCase()
+					.contains(query.toLowerCase())) {
+				resultado.add(matcoTipoMovimiento);
+			}
+
+		}
+		return resultado;
+	}
+
+	/*
+	 * Método que se utiliza para concatenar la clave y descripción de tipo de
+	 * movimiento
+	 */
+	public String formatearTipoMovimiento(String tipo, String descripcion) {
+		if (tipo == null || tipo.length() == 0) {
+			return "";
+		}
+		return tipo + " - " + descripcion;
+	}
+
+	/*
+	 * Método que se ejecuta cuando se selecciona un tipo de movimiento en el
+	 * que se asigna el valor al campo Tipo Movimiento
+	 */
+	public void tipoMovimientoChangeListener(AjaxBehaviorEvent event) {
+		esAbonoIndependiente = false;
+		if (tipoMovimientoAutoComplete != null) {
+			esAbonoIndependiente = tipoMovimientoAutoComplete
+					.getAbonoIndependiente().equals("Si");
+		}
+		FacesContext.getCurrentInstance().renderResponse();
+	}
+
+	/*
+	 * Método que recibe como parámetro el texto capturado en el autocomplete
+	 * del almacén de mantenimiento, hace el llamado a la persistencia para
+	 * obtener la lista de tipos de almacenes que cumplan con el criterio y
+	 * muestra la lista para que el usuario seleccione el almacen
+	 * correspondiente
+	 */
+	public List<Almacen> completeAlmacen(String query) {
+		List<Almacen> resultado = new ArrayList<Almacen>();
+		for (Almacen matcoAlmacen : listaAlmacen) {
+
+			if (matcoAlmacen.getNombreAlmacen().toLowerCase()
+					.contains(query.toLowerCase())) {
+				resultado.add(matcoAlmacen);
+			}
+		}
+		AlmacenConverter.listaAlmacenes = new ArrayList<Almacen>();
+		AlmacenConverter.listaAlmacenes.addAll(resultado);
+
+		return resultado;
+	}
+
+	public List<Almacen> completeAlmacenCargo(String query) {
+		List<Almacen> resultado = new ArrayList<Almacen>();
+		for (Almacen matcoAlmacen : listaAlmacen) {
+
+			if (matcoAlmacen.getNombreAlmacen().toLowerCase()
+					.contains(query.toLowerCase())) {
+				resultado.add(matcoAlmacen);
+			}
+		}
+		AlmacenConverter.listaAlmacenes = new ArrayList<Almacen>();
+		AlmacenConverter.listaAlmacenes.addAll(resultado);
+
+		return resultado;
+	}
+
+	/*
+	 * Método que se ejecuta cuando se selecciona una moneda en el que se asigna
+	 * el valor al campo Moneda y se obtiene la paridad correspondiente a la
+	 * moneda
+	 */
+	public void monedaChangeListener(AjaxBehaviorEvent event) {
+		RequestContext.getCurrentInstance().reset("frm:Paridad");
+		if (monedaAutoComplete == null) {
+			idMoneda = "";
+		} else {
+			idMoneda = monedaAutoComplete.getMoneda();
+		}
+		if (idMoneda != null && !idMoneda.equals("")) {
+			obtenerParidad();
+		}
+
+		RequestContext.getCurrentInstance().update("frm:Paridad");
+
+		FacesContext.getCurrentInstance().renderResponse();
+	}
+
+	public void metodoPagoChangeListener(AjaxBehaviorEvent event) {
+		solicitarCuentaPago = false;
+		if (metodoPagoAutoComplete != null) {
+			if (metodoPagoAutoComplete.getSolicitaCuenta() != null
+					&& metodoPagoAutoComplete.getSolicitaCuenta().toUpperCase()
+							.equals("SI")) {
+				solicitarCuentaPago = true;
+			}
+			// RequestContext.getCurrentInstance().reset("frm:lblCuentaPago");
+			// RequestContext.getCurrentInstance().reset("frm:cuentaPago");
+			// RequestContext.getCurrentInstance().update("frm:lblCuentaPago");
+			// RequestContext.getCurrentInstance().update("frm:cuentaPago");
+			//
+			// RequestContext.getCurrentInstance().reset("frm:collblCuentaPago");
+			// RequestContext.getCurrentInstance().reset("frm:colCuentaPago");
+			// RequestContext.getCurrentInstance().update("frm:collblCuentaPago");
+			// RequestContext.getCurrentInstance().update("frm:colCuentaPago");
+
+		}
+		FacesContext.getCurrentInstance().renderResponse();
+	}
+
+	/*
+	 * Método que realiza la concatenación de clave y nombre de almacén
+	 */
+	public String formatearAlmacen(int id, String nombre) {
+		StringBuilder resultado = new StringBuilder();
+		if (id > 0) {
+			String aux = String.format("%3s", String.valueOf(id));
+			aux = aux.replace(' ', '0');
+			resultado.append(aux);
+			resultado.append(" - ");
+			resultado.append(nombre);
+		} else {
+			resultado.append("");
+		}
+		return resultado.toString();
+	}
+
+	/*
+	 * Método que realiza la concatenación de clave y descripción de Moneda
+	 */
+	public String formatearMoneda(String tipo, String descripcion) {
+		if (tipo == null || tipo.length() == 0) {
+			return "Selecciona una Moneda";
+		}
+		return tipo + " - " + descripcion;
+	}
+
+	/*
+	 * Método que recibe como parámetro el texto capturado en el autocomplete de
+	 * moneda, hace el llamado a la persistencia para obtener la lista de
+	 * Monedas que cumplan con el criterio y muestra la lista para que el
+	 * usuario seleccione la moneda correspondiente
+	 */
+	public List<Moneda> completeMoneda(String query) {
+		List<Moneda> resultado = new ArrayList<Moneda>();
+		for (Moneda Moneda : listaMoneda) {
+
+			if (Moneda.getDescripcionMoneda().toLowerCase()
+					.contains(query.toLowerCase())) {
+				resultado.add(Moneda);
+			}
+		}
+		MonedaConverter.listaMonedas = new ArrayList<Moneda>();
+		MonedaConverter.listaMonedas.addAll(resultado);
+		return resultado;
+	}
+
+	private void actualizarSucursal() {
+		if (idAlmacen > 0) {
+			sucursalActual = servicioMatcoSucursal
+					.obtenerSucursalPorId(almacenAutoComplete.getSucursal()
+							.getSucursal());
+			if (sucursalActual != null) {
+				nombreSucursal = sucursalActual.getSucursalFormateado() + " - "
+						+ sucursalActual.getNombreSucursal();
+			}
+		}
+	}
+
+	/*
+	 * Método que obtiene la lista de tipos de movimiento que corresponden al
+	 * tipo de documento seleccionado
+	 */
+	public void obtenerListaTipoMovimiento() {
+		listaTipoMovimiento = new ListaMatcoTipoMovimiento();
+		if (tipoDocumentoAutoComplete != null
+				&& tipoDocumentoAutoComplete.getTipoDocumento() != null
+				&& getTipoDocumentoAutoComplete().getTipoDocumento().length() > 0) {
+
+			FiltroMatcoTipoMovimiento filtro = FiltroMatcoTipoMovimiento
+					.filtroMatcoTipoMovimientoObtenerTipoDocumento(tipoDocumentoAutoComplete
+							.getTipoDocumento());
+
+			filtro.setTipoFiltro("SELECTDEFAULT");
+			try {
+				listaTipoMovimiento = servicioMatcoTipoMovimiento
+						.matcotipomovimientoObtener(sesion, filtro);
+
+			} catch (Exception ex) {
+				Mensajes.error(ex.getMessage(), "");
+				log.info("Error al obtener Lista de Tipos de Movimientos");
+			}
+		}
+		TipoMovimientoConverter.listaTiposMovimiento = new ListaMatcoTipoMovimiento();
+		TipoMovimientoConverter.listaTiposMovimiento
+				.addAll(listaTipoMovimiento);
+
+		if (listaTipoMovimiento == null || listaTipoMovimiento.size() < 1) {
+			Mensajes.error(
+					"Error. No existen Tipos de Movimiento registrados para el "
+							+ "Tipo de Documento '" + serie + "'", "");
+		} else {
+			tipoMovimientoAutoComplete = listaTipoMovimiento.get(0);
+			// tipoMovimiento = tipoMovimientoAutoComplete.getTipoMovimiento();
+		}
+
+	}
+
+	/*
+	 * Método que se utiliza para mostrar el diálogo de confirmación para
+	 * eliminar el documento seleccionado
+	 */
+	public void solicitudEliminar() {
+		RequestContext.getCurrentInstance().execute(
+				"dialogoConfirmacionEliminarEntidad.show()");
+	}
+
+	/*
+	 * Método que se utiliza para mostrar el diálogo de confirmación de limpiar
+	 * los campos en caso de que haya cambios en la captura actual
+	 */
+	public void solicitudLimpiar() {
+		if (compararCambios()) {
+			RequestContext.getCurrentInstance().execute(
+					"dialogoConfirmacionLimpiar.show()");
+		} else {
+			cancelarCambios();
+		}
+	}
+
+	/*
+	 * Método que se utiliza para salir de la vista de mantenimiento validando
+	 * primero si hay cambios en la captura actual del documento y solicitando
+	 * confirmación para salir
+	 */
+	public String salirDocumento() {
+		String salir = "";
+		setOutcome("salir");
+		if (compararCambios()) {
+			org.primefaces.context.RequestContext.getCurrentInstance().execute(
+					"dialogoConfirmacion.show()");
+		} else {
+			previoSalir();
+			super.liberarBreadCrumb();
+			salir = "salir";
+
+		}
+		return salir;
+	}
+
+	/*
+	 * Método para guardar los datos capturados en la vista hacia la base de
+	 * datos y cerrar la vista regresando al listado
+	 */
+	public void guardarCerrar() {
+		guardar();
+		obtenerLista();
+		super.liberarBreadCrumb();
+	}
+
+	@SuppressWarnings("deprecation")
+	/*
+	 * Método el cual regresa una entidad del tipo MatcoReciboCaja que será
+	 * utilizado en los métodos Guardar y GuardarCerrar
+	 */
+	public MatcoReciboCaja obtenerEntidad() {
+		entidadActual = new MatcoReciboCaja();
+		try {
+
+			entidadActual.setSerie(serie);
+			entidadActual.setFolio(folio);
+			entidadActual.setFolioFiscal("");
+			entidadActual.setIdAlmacen(idAlmacen);
+
+			if (clienteAutoComplete != null
+					&& clienteAutoComplete.getCliente() != null) {
+				entidadActual.setIdCliente(idCliente);
+				entidadActual.setRazonSocial(clienteAutoComplete
+						.getRazonSocial());
+			}
+			if (direccionAutoComplete != null
+					&& direccionAutoComplete.getDireccion() != null
+					&& !direccionAutoComplete.getDireccion().startsWith(
+							"Selecciona")) {
+				entidadActual.setCalle(direccionAutoComplete.getCalle());
+				entidadActual.setCodigoPostal(direccionAutoComplete
+						.getCodigoPostal());
+				entidadActual.setIdColonia(direccionAutoComplete.getColonia());
+				entidadActual.setIdEstado(direccionAutoComplete.getEstado());
+				entidadActual.setIdLocalidad(direccionAutoComplete
+						.getLocalidad());
+				entidadActual.setIdMunicipio(direccionAutoComplete
+						.getMunicipio());
+				entidadActual.setIdPais(direccionAutoComplete.getPais());
+				entidadActual.setNumeroExterior(direccionAutoComplete
+						.getNoExterior());
+				entidadActual.setNumeroInterior(direccionAutoComplete
+						.getNoInterior());
+			}
+			if (metodoPagoAutoComplete != null) {
+				entidadActual.setIdMetodoPago(metodoPagoAutoComplete
+						.getIdMetodoPago());
+			}
+			if (monedaAutoComplete != null) {
+				entidadActual.setIdMoneda(monedaAutoComplete.getMoneda());
+			}
+			if (tipoPagoAutoComplete != null) {
+				entidadActual.setIdTipoPago(tipoPagoAutoComplete.getTipoPago());
+			}
+			entidadActual.setCapturo(capturo);
+
+			entidadActual.setCreadorPor(creadorPor);
+			entidadActual.setCuentaPago(cuentaPago);
+			entidadActual.setEstatus("A");
+			entidadActual.setFecha(Librerias.obtenerFechaSinHora(fecha));
+			entidadActual.setFechaHoraCaptura(Librerias
+					.obtenerFechaConHora(fecha));
+
+			entidadActual.setFechaCancelacion(Librerias
+					.obtenerFechaSinHora(new Date(1899, 12, 31)));
+			entidadActual.setFechaHoraActualizacion(Librerias
+					.obtenerFechaSinHora(new Date(1899, 12, 31)));
+			entidadActual.setFechaExpedicion(Librerias
+					.obtenerFechaSinHora(new Date(1899, 12, 31)));
+			entidadInicial.setFechaHoraCaptura(entidadActual
+					.getFechaHoraCaptura());
+			entidadInicial.setFechaHoraActualizacion(entidadActual
+					.getFechaHoraActualizacion());
+
+			entidadActual.setGravable(gravable);
+
+			entidadActual.setImpuesto(0);
+			entidadActual.setModificadoPor("");
+			entidadActual.setParidad(paridad);
+
+			entidadActual.setSubtotal(totalCargos);
+			entidadActual.setTipoMovimiento("");
+			entidadActual.setTotal(totalCargos);
+			entidadActual.setIdSucursal(sucursalActual.getSucursal());
+			
+			entidadActual.setDetalles(MatcoReciboCaja.getDetallesTodos());
+		} catch (Exception ex) {
+
+		}
+		return entidadActual;
+	}
+
+	
+	private Moneda obtenerMoneda(String pMoneda) {
+		if (listaMoneda != null) {
+			for (Moneda elemento : listaMoneda) {
+				if (elemento.getMoneda().equals(pMoneda)) {
+					return elemento;
+				}
+			}
+		}
+		return null;
+	}
+
+	/*
+	 * Método en el que se resetean los valores de los controles de la captura
+	 * del mantenimiento
+	 */
+	private void resetearCampos() {
+		mostrarBotonLimpiarCliente = false;
+		mostrarBotonLimpiarDireccion = false;
+		RequestContext.getCurrentInstance().reset("frm:tipoDocumento");
+		RequestContext.getCurrentInstance().reset("frm:Almacen");
+		RequestContext.getCurrentInstance().reset("frm:folio");
+		RequestContext.getCurrentInstance().reset("frm:tipoMovimiento");
+		RequestContext.getCurrentInstance().reset("frm:fecha");
+		RequestContext.getCurrentInstance().reset("frm:clienteRazonSocial");
+		RequestContext.getCurrentInstance().reset("frm:conceptoCargo");
+		RequestContext.getCurrentInstance().reset("frm:moneda");
+		RequestContext.getCurrentInstance().reset("frm:Paridad");
+
+		RequestContext.getCurrentInstance().reset("frm:botonLimpiarCliente");
+		RequestContext.getCurrentInstance().reset("frm:botonesMantenimiento");
+		RequestContext.getCurrentInstance().reset("frm:tipoPago");
+		RequestContext.getCurrentInstance().reset("frm:metodoPago");
+		RequestContext.getCurrentInstance().reset("frm:cuentaPago");
+
+		RequestContext.getCurrentInstance().reset("frm:Direccion");
+		RequestContext.getCurrentInstance().reset("frm:DireccionAtomica");
+		RequestContext.getCurrentInstance().reset("frm:tabla");
+		RequestContext.getCurrentInstance().reset("frm:documentoCargo");
+		RequestContext.getCurrentInstance().reset("frm:botonBusquedaCargo");
+		RequestContext.getCurrentInstance().reset("frm:conceptoCargo");
+		RequestContext.getCurrentInstance().reset("frm:importeCargo");
+
+		RequestContext.getCurrentInstance().reset("frm:pnlBotones");
+		RequestContext.getCurrentInstance().reset("frm:totalCargos");
+
+		RequestContext.getCurrentInstance().update("frm:tipoDocumento");
+		RequestContext.getCurrentInstance().update("frm:Almacen");
+		RequestContext.getCurrentInstance().update("frm:folio");
+		RequestContext.getCurrentInstance().update("frm:tipoMovimiento");
+		RequestContext.getCurrentInstance().update("frm:fecha");
+		RequestContext.getCurrentInstance().update("frm:clienteRazonSocial");
+		RequestContext.getCurrentInstance().update("frm:conceptoCargo");
+		RequestContext.getCurrentInstance().update("frm:moneda");
+		RequestContext.getCurrentInstance().update("frm:Paridad");
+
+		RequestContext.getCurrentInstance().update("frm:botonLimpiarCliente");
+		RequestContext.getCurrentInstance().update("frm:botonesMantenimiento");
+		RequestContext.getCurrentInstance().update("frm:tipoPago");
+		RequestContext.getCurrentInstance().update("frm:metodoPago");
+		RequestContext.getCurrentInstance().update("frm:cuentaPago");
+
+		RequestContext.getCurrentInstance().update("frm:Direccion");
+		RequestContext.getCurrentInstance().update("frm:DireccionAtomica");
+		RequestContext.getCurrentInstance().update("frm:tabla");
+		RequestContext.getCurrentInstance().update("frm:documentoCargo");
+		RequestContext.getCurrentInstance().update("frm:botonBusquedaCargo");
+		RequestContext.getCurrentInstance().update("frm:conceptoCargo");
+		RequestContext.getCurrentInstance().update("frm:importeCargo");
+
+		RequestContext.getCurrentInstance().update("frm:pnlBotones");
+		RequestContext.getCurrentInstance().update("frm:totalCargos");
+	}
+
+	/*
+	 * Método que regresa el texto a mostrar en el diálogo de cancelar
+	 */
+	public String mensajeCancelar() {
+		String resultado = "";
+		if (entidadSeleccionada != null) {
+			resultado = "¿Deseas cancelar el documento: "
+					+ entidadSeleccionada.getDocumento() + "?";
+		}
+
+		return resultado;
+	}
+
+	/*
+	 * Método que regresa el texto a mostrar en el diálogo de eliminar
+	 */
+	public String mensajeEliminar() {
+		String resultado = "";
+		if (entidadSeleccionada != null) {
+			resultado = "¿Deseas eliminar el documento: "
+					+ entidadSeleccionada.getDocumento() + "?";
+		}
+
+		return resultado;
+	}
+
+	/*
+	 * Método que recibe como parámetro el texto capturado en el autocomplete
+	 * del cliente, hace el llamado a la persistencia para obtener la lista de
+	 * clientes que cumplan con el criterio y muestra la lista para que el
+	 * usuario seleccione el cliente correspondiente
+	 */
+	public List<Cliente> completeCliente(String query) {
+		List<Cliente> resultado = new ArrayList<Cliente>();
+		if (ClienteConverter.listaClientes == null) {
+			ClienteConverter.listaClientes = new ArrayList<Cliente>();
+		}
+
+		if (busquedaClienteAnterior != null
+				&& !busquedaClienteAnterior.equals("")
+				&& query.contains(busquedaClienteAnterior)) {
+			for (Cliente matcoCliente : ClienteConverter.listaClientes) {
+				StringBuilder cliente = new StringBuilder();
+				cliente.append(String.format("%6s",
+						String.valueOf(((Cliente) matcoCliente).getCliente()))
+						.replace(' ', '0'));
+
+				if (matcoCliente.getRazonSocial().toLowerCase()
+						.contains(query.toLowerCase())
+						|| cliente.toString().contains(query)) {
+					resultado.add(matcoCliente);
+				}
+
+			}
+		} else {
+			try {
+
+				resultado = servicioMatcoCliente.obtenerTodosClientes(query);
+			} catch (Exception ex) {
+				Mensajes.error(ex.getMessage(), "");
+				log.info("Error al obtener Lista de Clientes");
+			}
+		}
+		if (resultado != null && resultado.size() > 0) {
+			busquedaClienteAnterior = query;
+			ClienteConverter.listaClientes = resultado;
+
+		}
+		return resultado;
+	}
+
+	public void obtenerListaDireccionesPorCliente() {
+		deshabilitarCampoDireccion = false;
+		FiltroMatcoDireccion filtro = FiltroMatcoDireccion
+				.filtroMatcoDireccionObtenerPorCliente(idCliente);
+		try {
+			listaDireccion = servicioMatcoDireccionProveedor
+					.matcodireccionObtener(sesion, filtro);
+
+			if (listaDireccion != null && listaDireccion.size() == 1) {
+
+				deshabilitarCampoDireccion = true;
+			} else {
+				MatcoDireccion direccion = new MatcoDireccion();
+				direccion.setDireccion("Selecciona una Dirección");
+				listaDireccion.add(0, direccion);
+			}
+			DireccionConverter.listaDirecciones = listaDireccion;
+			direccionAutoComplete = listaDireccion.get(0);
+			if (listaDireccion.size() == 1) {
+				direccionCompuesta = direccionAutoComplete
+						.getDireccionCompuesta();
+			}
+		} catch (Exception e) {
+			log.error(e.getMessage());
+			Mensajes.error(e.getMessage());
+		}
+	}
+
+	public void clienteChangeListener(AjaxBehaviorEvent event) {
+		// RequestContext.getCurrentInstance().reset("frm:Direccion");
+		if (clienteAutoComplete == null) {
+			listaDireccion = new ListaMatcoDireccion();
+			idCliente = 0;
+		} else {
+			idCliente = clienteAutoComplete.getCliente();
+			obtenerListaDireccionesPorCliente();
+		}
+		if (idCliente > 0) {
+			inhabilitarCampoCliente();
+		}
+		// RequestContext.getCurrentInstance().update("frm:Direccion");
+		FacesContext.getCurrentInstance().renderResponse();
+	}
+
+	public void direccionChangeListener() {
+		RequestContext.getCurrentInstance().reset("frm:DireccionAtomica");
+		direccionCompuesta = "";
+		mostrarBotonLimpiarDireccion = false;
+		if (direccionAutoComplete != null
+				&& direccionAutoComplete.getDireccion() != null
+				&& !direccionAutoComplete.getDireccion().startsWith(
+						"Selecciona")) {
+			direccionCompuesta = direccionAutoComplete.getDireccionCompuesta();
+			inhabilitarCampoDireccion();
+		}
+		RequestContext.getCurrentInstance().update("frm:DireccionAtomica");
+		FacesContext.getCurrentInstance().renderResponse();
+	}
+
+	public ListaMatcoDireccion completeDireccion(String query) {
+		ListaMatcoDireccion resultado = new ListaMatcoDireccion();
+		for (MatcoDireccion matcoDireccion : listaDireccion) {
+			if (matcoDireccion.getDireccionCompuesta().toUpperCase()
+					.contains(query.toUpperCase())) {
+				resultado.add(matcoDireccion);
+			}
+		}
+		DireccionConverter.listaDirecciones = new ListaMatcoDireccion();
+		DireccionConverter.listaDirecciones.addAll(resultado);
+		return resultado;
+	}
+
+	
+	private MatcoCargo obtenerCargo() {
+		MatcoCargo resultado = null;
+		if (serieCargo == null || idAlmacenCargo == 0 || folioCargo == 0) {
+			return resultado;
+		}
+
+		try {
+			FiltroMatcoCargo filtro = FiltroMatcoCargo
+					.filtroMatcoCargoObtenerPK(serieCargo, idAlmacenCargo,
+							folioCargo);
+			resultado = servicioMatcoCargo.matcocargoObtenerEntidad(sesion,
+					filtro);
+		} catch (Exception ex) {
+			Mensajes.error(ex.getMessage(), "");
+			log.info("Error al validar si existe Cargo ");
+		}
+
+		return resultado;
+	}
+
+	public void tipoDocumentoCargosChangeListener(AjaxBehaviorEvent event) {
+		if (tipoDocumentoCargoAutoComplete == null) {
+			serieCargo = "";
+		} else {
+			serieCargo = tipoDocumentoCargoAutoComplete.getTipoDocumento();
+		}
+		FacesContext.getCurrentInstance().renderResponse();
+	}
+
+	public void almacenCargosChangeListener(AjaxBehaviorEvent event) {
+		if (almacenCargoAutoComplete == null) {
+			idAlmacenCargo = 0;
+		} else {
+			idAlmacenCargo = almacenCargoAutoComplete.getAlmacen();
+		}
+		FacesContext.getCurrentInstance().renderResponse();
+	}
+		
+	public String getTituloBusqueda() {
+		return tituloBusqueda;
+	}
+
+	public void setTituloBusqueda(String tituloBusqueda) {
+		this.tituloBusqueda = tituloBusqueda;
+	}
+
+	public String getSrcBusqueda() {
+		return srcBusqueda;
+	}
+
+	public void setSrcBusqueda(String srcBusqueda) {
+		this.srcBusqueda = srcBusqueda;
+	}
+
+	public boolean isSolicitarDocumentoCargo() {
+		boolean resultado = (enModoEdicion || modoEdicion == "Agregar")
+				&& !esAbonoIndependiente;
+		return resultado;
+	}
+
+	private String tituloBusqueda;
+	private String srcBusqueda;
+
+	public String concatenarTexto(String tipo, String descripcion,
+			String textoDefault) {
+		if (tipo == null || tipo.length() == 0 || descripcion == null
+				|| descripcion.length() == 0) {
+			return textoDefault;
+		}
+		return tipo + " - " + descripcion;
+	}
+
+	public void ejecutarBusqueda() {
+		idCliente = clienteAutoComplete.getCliente();
+		idMoneda = monedaAutoComplete.getMoneda();
+		razonSocial = clienteAutoComplete.getRazonSocialGrid();
+		CargoConsultaBean consulta = AccesoContexto
+				.getManageBean("cargoConsultaBean");
+
+		List<String> listaDocumentoCargo = new ArrayList<String>();
+		if (listaClavesCargos != null && listaClavesCargos.size() > 0)
+			for (MatcoReciboCajaDetalle detalle : listaClavesCargos.values()) {
+				if (detalle.getDocumento() != null
+						&& detalle.getDocumento().length() > 0) {
+					listaDocumentoCargo.add(detalle.getDocumento());
+				}
+			}
+		consulta.actualizarConsulta(sucursalActual.getSucursal(),
+				sucursalActual.getNombreSucursal(), idCliente, razonSocial,
+				idMoneda, monedaAutoComplete.getAbreviacionMoneda(),
+				monedaAutoComplete.getDescripcionMoneda(), listaDocumentoCargo);
+
+	}
+
+	public void obtenerResultadoBusqueda() {
+		
+	}
+
+	@Override
+	public String ObtenerClaveBitacora() {
+		String claveBitacora = entidadActual != null ? entidadActual
+				.getDocumento() : "";
+		return claveBitacora;
+	}
+
+	@Override
+	public Object obtenerEntidadInicial() {
+		return entidadInicial;
+	}
+
+	@Override
+	public Object obtenerEntidadActual() {
+		return entidadActual;
+	}
+
+	public ListaMatcoOtroCargo getListaOtrosCargos() {
+		return listaOtrosCargos;
+	}
+
+	public void setListaOtrosCargos(ListaMatcoOtroCargo listaOtrosCargos) {
+		this.listaOtrosCargos = listaOtrosCargos;
+	}
+
+	public MatcoOtroCargo getEntidadSeleccionadaOtroCargo() {
+		return entidadSeleccionadaOtroCargo;
+	}
+
+	public void setEntidadSeleccionadaOtroCargo(
+			MatcoOtroCargo entidadSeleccionadaOtroCargo) {
+		this.entidadSeleccionadaOtroCargo = entidadSeleccionadaOtroCargo;
+	}
+
+	private ListaMatcoOtroCargo listaOtrosCargos;
+	
+	private MatcoOtroCargo entidadSeleccionadaOtroCargo;
+}
